@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1200" viewBox="0 0 1600 1200">
+  <defs>
+    <radialGradient id="g" cx="50%" cy="30%" r="80%">
+      <stop offset="0%" stop-color="#1b2a66" stop-opacity="0.55"></stop>
+      <stop offset="55%" stop-color="#0b0f1e" stop-opacity="0.35"></stop>
+      <stop offset="100%" stop-color="#05060a" stop-opacity="0.9"></stop>
+    </radialGradient>
+
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="1.1" result="b"></feGaussianBlur>
+      <feMerge>
+        <feMergeNode in="b"></feMergeNode>
+        <feMergeNode in="SourceGraphic"></feMergeNode>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="1200" fill="url(#g)"></rect>
+
+  <!-- Topo-ish lines -->
+  <g fill="none" stroke="#8aa4ff" stroke-opacity="0.22" stroke-width="2" filter="url(#glow)">
+    <path d="M60,220 C220,80 420,120 520,200 C650,300 780,250 900,160 C1040,60 1240,40 1520,180"></path>
+    <path d="M40,300 C220,160 420,200 520,280 C650,380 780,330 900,240 C1040,140 1240,120 1540,260"></path>
+    <path d="M20,380 C220,250 420,290 520,360 C650,470 780,420 900,330 C1040,230 1240,210 1560,340"></path>
+    <path d="M0,460 C220,340 420,380 520,450 C650,560 780,510 900,420 C1040,320 1240,300 1580,420"></path>
+    <path d="M-20,540 C220,430 420,470 520,540 C650,650 780,600 900,510 C1040,410 1240,390 1600,500"></path>
+    <path d="M-40,620 C220,520 420,560 520,630 C650,740 780,690 900,600 C1040,500 1240,480 1620,580"></path>
+    <path d="M-60,700 C220,610 420,650 520,720 C650,830 780,780 900,690 C1040,590 1240,570 1640,660"></path>
+    <path d="M-80,780 C220,700 420,740 520,810 C650,920 780,870 900,780 C1040,680 1240,660 1660,740"></path>
+    <path d="M-100,860 C220,790 420,830 520,900 C650,1010 780,960 900,870 C1040,770 1240,750 1680,820"></path>
+  </g>
+
+  <g fill="none" stroke="#2df6c8" stroke-opacity="0.10" stroke-width="1.5">
+    <path d="M120,160 C260,100 420,110 560,180 C720,260 880,250 1040,170 C1210,80 1380,90 1500,140"></path>
+    <path d="M80,940 C240,860 420,820 600,870 C780,920 980,900 1160,820 C1320,760 1460,770 1580,820"></path>
+  </g>
+</svg>
