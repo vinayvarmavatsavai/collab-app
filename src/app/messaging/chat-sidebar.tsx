@@ -108,7 +108,7 @@ export function ChatSidebar({
   )
 
   return (
-    <aside className="flex w-80 flex-col border-r border-border bg-secondary/50 lg:w-96">
+    <aside className="flex w-full flex-col bg-secondary/50 md:w-80 md:border-r md:border-border lg:w-96">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <h2 className="text-base font-semibold text-foreground">Messages</h2>
         <button type="button" className="text-sm text-muted-foreground hover:text-foreground" aria-label="New message">
@@ -135,12 +135,12 @@ export function ChatSidebar({
                 type="button"
                 onClick={() => setActiveTab(tab.key)}
                 className={cn(
-                  "rounded-lg px-2 py-2 text-xs font-semibold transition",
+                  "rounded-lg px-1 py-2 text-[11px] font-semibold transition sm:px-2 sm:text-xs",
                   isActive ? "bg-white text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 {tab.label}
-                <span className={cn("ml-1 text-[11px]", isActive ? "text-primary" : "text-muted-foreground")}>({tabCounts[tab.key]})</span>
+                <span className={cn("ml-1 text-[10px] sm:text-[11px]", isActive ? "text-primary" : "text-muted-foreground")}>({tabCounts[tab.key]})</span>
               </button>
             )
           })}

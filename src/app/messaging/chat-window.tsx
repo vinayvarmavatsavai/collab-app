@@ -7,9 +7,11 @@ import { getMessagesForContact } from "@/components/messaging/chat-data"
 
 interface ChatWindowProps {
   contact: ChatContact
+  showMobileBack?: boolean
+  onMobileBack?: () => void
 }
 
-export function ChatWindow({ contact }: ChatWindowProps) {
+export function ChatWindow({ contact, showMobileBack = false, onMobileBack }: ChatWindowProps) {
   const [messagesByContact, setMessagesByContact] = useState<Record<string, Message[]>>({})
   const [draftByContact, setDraftByContact] = useState<Record<string, string>>({})
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -60,8 +62,18 @@ export function ChatWindow({ contact }: ChatWindowProps) {
 
   return (
     <div className="flex min-w-0 flex-1 flex-col bg-card">
-      <div className="flex items-center justify-between border-b border-border px-6 py-3">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3 md:px-6">
         <div className="flex items-center gap-3">
+          {showMobileBack && (
+            <button
+              type="button"
+              onClick={onMobileBack}
+              className="rounded-md px-2 py-1 text-sm text-muted-foreground hover:text-foreground md:hidden"
+              aria-label="Back to conversations"
+            >
+              ←
+            </button>
+          )}
           <div className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
             {contact.initials}
           </div>
@@ -76,7 +88,7 @@ export function ChatWindow({ contact }: ChatWindowProps) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-4">
+      <div className="flex-1 overflow-y-auto px-3 py-3 md:px-6 md:py-4">
         <div className="flex flex-col gap-3">
           {messages.map((msg) => (
             <div
@@ -88,7 +100,7 @@ export function ChatWindow({ contact }: ChatWindowProps) {
             >
               <div
                 className={cn(
-                  "max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
+                  "max-w-[85%] rounded-2xl px-3 py-2.5 text-sm leading-relaxed sm:max-w-[75%] sm:px-4",
                   msg.sender === "me"
                     ? "bg-primary text-primary-foreground rounded-br-md"
                     : "bg-muted text-foreground rounded-bl-md"
@@ -103,7 +115,7 @@ export function ChatWindow({ contact }: ChatWindowProps) {
         </div>
       </div>
 
-      <div className="flex items-center gap-3 border-t border-border px-4 py-3">
+      <div className="flex items-center gap-2 border-t border-border px-3 py-3 sm:gap-3 sm:px-4">
         <button type="button" className="text-muted-foreground" aria-label="Attach file">📎</button>
         <input
           placeholder="Type a message..."
@@ -121,7 +133,7 @@ export function ChatWindow({ contact }: ChatWindowProps) {
           type="button"
           onClick={handleSend}
           disabled={!inputValue.trim()}
-          className="rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-40"
+          className="shrink-0 rounded-full bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-40 sm:px-4"
           aria-label="Send message"
         >
           Send
