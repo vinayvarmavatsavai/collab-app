@@ -12,7 +12,7 @@ export default function LoginPage() {
 
       <button
         className="mt-6 w-full rounded-xl bg-black text-white py-3 font-semibold"
-        onClick={() => router.replace("/onboarding/profile-builder")}
+        onClick={() => router.replace("/onboarding")}
       >
         Continue (Mock Login)
       </button>
