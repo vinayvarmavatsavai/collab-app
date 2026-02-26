@@ -101,18 +101,20 @@ export default function ProfileBuilderPage() {
   );
 
   useEffect(() => {
-    const signupCompleted = localStorage.getItem("signupCompleted") === "true";
-    const profileCompleted = localStorage.getItem("profileCompleted") === "true";
+  const signupCompleted = localStorage.getItem("signupCompleted") === "true";
+  const profileCompleted = localStorage.getItem("profileCompleted") === "true";
 
-    if (!signupCompleted) {
-      router.replace("/");
-      return;
-    }
+  if (!signupCompleted) {
+    router.replace("/");
+    return;
+  }
 
-    if (profileCompleted) {
-      router.replace("/home");
-    }
-  }, [router]);
+  // ✅ only redirect to home if profile is completed
+  if (profileCompleted) {
+    router.replace("/home");
+    return;
+  }
+}, [router]);
 
   // Auto scroll
   useEffect(() => {

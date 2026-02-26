@@ -37,10 +37,15 @@ export function SignupWizard() {
     }, 150)
   }
 
-  const handleCreateAccount = () => {
-    localStorage.setItem("signupCompleted", "true")
-    router.push("/onboarding")
-  }
+ const handleCreateAccount = () => {
+  localStorage.setItem("signupCompleted", "true");
+
+  // reset onboarding so it always opens after signup
+  localStorage.removeItem("profileCompleted"); 
+  localStorage.removeItem("profileAnswers");
+
+  router.replace("/onboarding");
+};
 
   return (
     <main className="flex min-h-screen items-start justify-center px-4 py-12 sm:items-center sm:py-16">
