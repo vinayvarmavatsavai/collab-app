@@ -37,12 +37,25 @@ const mockSuggested: Collaboration[] = [
 
 export default function HomePage() {
   const router = useRouter();
-  const [name, setName] = useState("User");
+  const [name] = useState(() => {
+    if (typeof window === "undefined") return "User";
+    return localStorage.getItem("profileAnswers") ? "Vinay" : "User";
+  });
 
   useEffect(() => {
-    const data = localStorage.getItem("profileAnswers");
-    if (data) setName("Vinay");
-  }, []);
+    const signupCompleted = localStorage.getItem("signupCompleted") === "true";
+    const profileCompleted = localStorage.getItem("profileCompleted") === "true";
+
+    if (!signupCompleted) {
+      router.replace("/");
+      return;
+    }
+
+    if (!profileCompleted) {
+      router.replace("/onboarding");
+      return;
+    }
+  }, [router]);
 
   return (
     <div className="min-h-screen pb-24 bg-[#F4F6FB] text-slate-900 px-4 py-6">
