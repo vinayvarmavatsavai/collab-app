@@ -1,3 +1,4 @@
+// file: src/app/onboarding/profile-builder/page.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -65,6 +66,8 @@ const QUESTIONS: Question[] = [
 const SCRIPT_AFTER_INNOVATE =
   "I know you are a passionate builder looking to contribute to a lot of varied problem statements, but to help me understand your skills and aspirations clearly, I want a clear set of immediate goals.";
 
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
 export default function ProfileBuilderPage() {
   const router = useRouter();
 
@@ -73,12 +76,12 @@ export default function ProfileBuilderPage() {
   const [input, setInput] = useState("");
   const [done, setDone] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [isBusy, setIsBusy] = useState(false);
 
-  const chatRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
 
   const total = QUESTIONS.length;
-  const question = QUESTIONS[qIndex];
 
   const [messages, setMessages] = useState<Msg[]>(() => [
     {
@@ -100,29 +103,31 @@ export default function ProfileBuilderPage() {
     [done, qIndex, total]
   );
 
+  // Guard routes
   useEffect(() => {
-  const signupCompleted = localStorage.getItem("signupCompleted") === "true";
-  const profileCompleted = localStorage.getItem("profileCompleted") === "true";
+    const signupCompleted = localStorage.getItem("signupCompleted") === "true";
+    const profileCompleted = localStorage.getItem("profileCompleted") === "true";
 
-  if (!signupCompleted) {
-    router.replace("/");
-    return;
-  }
+    if (!signupCompleted) {
+      router.replace("/");
+      return;
+    }
 
-  // ✅ only redirect to home if profile is completed
-  if (profileCompleted) {
-    router.replace("/home");
-    return;
-  }
-}, [router]);
+    if (profileCompleted) {
+      router.replace("/home");
+    }
+  }, [router]);
 
-  // Auto scroll
+  // 🔥 Perfect auto-scroll
   useEffect(() => {
-    if (!chatRef.current) return;
-    chatRef.current.scrollTo({
-      top: chatRef.current.scrollHeight,
-      behavior: "smooth",
-    });
+    const id = setTimeout(() => {
+      bottomRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "end",
+      });
+    }, 80);
+
+    return () => clearTimeout(id);
   }, [messages, isTyping]);
 
   // Auto resize textarea
@@ -154,49 +159,47 @@ export default function ProfileBuilderPage() {
     ]);
   }
 
-  function askNext(nextIndex: number) {
-    addBotQuestion(QUESTIONS[nextIndex]);
-  }
-
   function finish() {
     setDone(true);
     addBotText("✅ All set. Your profile draft is ready. Tap Continue →");
   }
 
   async function onSend() {
-    const text = input.trim();
-    if (!text || done) return;
+    if (done || isBusy) return;
 
+    const text = input.trim();
+    if (!text) return;
+
+    const currentQuestion = QUESTIONS[qIndex];
+
+    setIsBusy(true);
     addUser(text);
     setInput("");
 
-    setAnswers((p) => ({ ...p, [question.id]: text }));
+    setAnswers((p) => ({ ...p, [currentQuestion.id]: text }));
 
-    // Special scripted typing effect
-    if (question.id === "innovate") {
+    if (currentQuestion.id === "innovate") {
       setIsTyping(true);
-      setTimeout(() => {
-        addBotText("Everything. 😄");
-      }, 600);
-
-      setTimeout(() => {
-        addBotText(SCRIPT_AFTER_INNOVATE);
-        setIsTyping(false);
-      }, 1300);
+      await sleep(600);
+      addBotText("Everything. 😄");
+      await sleep(700);
+      addBotText(SCRIPT_AFTER_INNOVATE);
+      setIsTyping(false);
     }
 
     const next = qIndex + 1;
+
     if (next < total) {
-      setTimeout(() => {
-        setQIndex(next);
-        askNext(next);
-      }, 900);
+      await sleep(650);
+      setQIndex(next);
+      addBotQuestion(QUESTIONS[next]);
+      setIsBusy(false);
       return;
     }
 
-    setTimeout(() => {
-      finish();
-    }, 800);
+    await sleep(550);
+    finish();
+    setIsBusy(false);
   }
 
   function onContinue() {
@@ -220,71 +223,69 @@ export default function ProfileBuilderPage() {
       </div>
 
       {/* CHAT AREA */}
-      <div className="px-4 flex flex-col min-h-[calc(100dvh-140px)]">
-        <div
-          ref={chatRef}
-          className="flex-1 overflow-y-auto pt-4 pb-6 space-y-4"
-        >
-          {messages.map((m) => {
-            if (m.kind === "user") {
-              return (
-                <div key={m.id} className="flex justify-end">
-                  <div className="max-w-[82%] rounded-2xl bg-[#2D6BFF] px-4 py-3 text-[15px] font-semibold text-white transition-all duration-200">
-                    {m.text}
-                  </div>
-                </div>
-              );
-            }
-
+      <div className="px-4 pt-4 pb-[210px] space-y-4">
+        {messages.map((m) => {
+          if (m.kind === "user") {
             return (
-              <div key={m.id} className="flex items-start gap-3">
-                <div className="h-9 w-9 rounded-full bg-[#2D6BFF]/15 flex items-center justify-center">
-                  <div className="h-4 w-4 rounded-full bg-[#2D6BFF]/40" />
-                </div>
-
-                <div className="max-w-[85%]">
-                  {m.kind === "intro" || m.kind === "botText" ? (
-                    <div className="rounded-2xl bg-white border border-slate-200 px-4 py-3 text-[15px] shadow-sm">
-                      {m.text}
-                    </div>
-                  ) : (
-                    <div className="rounded-2xl bg-white border border-slate-200 px-4 py-4 shadow-sm">
-                      <div className="text-[17px] font-bold">
-                        {m.title}
-                      </div>
-                      {m.helper && (
-                        <div className="mt-2 text-sm text-slate-600">
-                          {m.helper}
-                        </div>
-                      )}
-                      {m.example && (
-                        <div className="mt-3 text-sm text-slate-500 italic">
-                          {m.example}
-                        </div>
-                      )}
-                    </div>
-                  )}
+              <div key={m.id} className="flex justify-end">
+                <div className="max-w-[82%] rounded-2xl bg-[#2D6BFF] px-4 py-3 text-[15px] font-semibold text-white">
+                  {m.text}
                 </div>
               </div>
             );
-          })}
+          }
 
-          {isTyping && (
-            <div className="text-sm text-slate-500 italic pl-12">
-              SphereGuide is typing...
+          return (
+            <div key={m.id} className="flex items-start gap-3">
+              <div className="h-9 w-9 rounded-full bg-[#2D6BFF]/15 flex items-center justify-center">
+                <div className="h-4 w-4 rounded-full bg-[#2D6BFF]/40" />
+              </div>
+
+              <div className="max-w-[85%]">
+                {m.kind === "intro" || m.kind === "botText" ? (
+                  <div className="rounded-2xl bg-white border border-slate-200 px-4 py-3 text-[15px] shadow-sm">
+                    {m.text}
+                  </div>
+                ) : (
+                  <div className="rounded-2xl bg-white border border-slate-200 px-4 py-4 shadow-sm">
+                    <div className="text-[17px] font-bold">
+                      {m.title}
+                    </div>
+                    {m.helper && (
+                      <div className="mt-2 text-sm text-slate-600">
+                        {m.helper}
+                      </div>
+                    )}
+                    {m.example && (
+                      <div className="mt-3 text-sm text-slate-500 italic">
+                        {m.example}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          )}
-        </div>
+          );
+        })}
+
+        {isTyping && (
+          <div className="text-sm text-slate-500 italic pl-12">
+            SphereGuide is typing...
+          </div>
+        )}
+
+        {/* Anchor for smooth scroll */}
+        <div ref={bottomRef} />
       </div>
 
       {/* COMPOSER */}
-      <div className="fixed bottom-0 left-0 right-0 border-t bg-white p-4">
+      <div className="fixed bottom-0 left-0 right-0 border-t bg-white p-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
         <div className="flex items-end gap-3">
           <div className="flex-1 border border-slate-200 rounded-2xl px-4 py-3">
             <textarea
               ref={textareaRef}
               value={input}
-              disabled={done}
+              disabled={done || isBusy}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -292,7 +293,11 @@ export default function ProfileBuilderPage() {
                   onSend();
                 }
               }}
-              placeholder="Type your answer..."
+              placeholder={
+                isBusy
+                  ? "SphereGuide is responding..."
+                  : "Type your answer..."
+              }
               rows={1}
               className="w-full resize-none bg-transparent outline-none text-[15px]"
             />
@@ -300,8 +305,8 @@ export default function ProfileBuilderPage() {
 
           <button
             onClick={onSend}
-            disabled={done || input.trim().length === 0}
-            className="h-12 px-6 rounded-2xl bg-[#2D6BFF] text-white font-bold transition-transform duration-150 active:scale-95 disabled:opacity-50"
+            disabled={done || isBusy || input.trim().length === 0}
+            className="h-12 px-6 rounded-2xl bg-[#2D6BFF] text-white font-bold disabled:opacity-50"
           >
             Send
           </button>
