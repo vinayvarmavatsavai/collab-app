@@ -1,4 +1,3 @@
-// file: app/profile-builder/page.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -101,6 +100,20 @@ export default function ProfileBuilderPage() {
     [done, qIndex, total]
   );
 
+  useEffect(() => {
+    const signupCompleted = localStorage.getItem("signupCompleted") === "true";
+    const profileCompleted = localStorage.getItem("profileCompleted") === "true";
+
+    if (!signupCompleted) {
+      router.replace("/");
+      return;
+    }
+
+    if (profileCompleted) {
+      router.replace("/home");
+    }
+  }, [router]);
+
   // Auto scroll
   useEffect(() => {
     if (!chatRef.current) return;
@@ -184,27 +197,10 @@ export default function ProfileBuilderPage() {
     }, 800);
   }
 
-  function onSkip() {
-    if (done) return;
-
-    setAnswers((p) => ({ ...p, [question.id]: "" }));
-    addUser("Skipped");
-
-    const next = qIndex + 1;
-    if (next < total) {
-      setTimeout(() => {
-        setQIndex(next);
-        askNext(next);
-      }, 500);
-      return;
-    }
-    finish();
-  }
-
   function onContinue() {
     localStorage.setItem("profileCompleted", "true");
     localStorage.setItem("profileAnswers", JSON.stringify(answers));
-    router.replace("/home");
+    router.push("/home");
   }
 
   return (
