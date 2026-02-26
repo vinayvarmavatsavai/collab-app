@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
+type FooterTab = "home" | "explore" | "create" | "events" | "profile";
+
 type Milestone = {
   title: string;
   status: "Completed" | "In progress";
@@ -47,7 +49,9 @@ export default function ProfilePage() {
   const [activeYear, setActiveYear] = useState<number>(years[0]);
   const [historyShown, setHistoryShown] = useState(1);
 
-  // Demo profile (later from backend)
+  // ✅ match Explore footer highlight logic
+  const [footerTab, setFooterTab] = useState<FooterTab>("profile");
+
   const [profile, setProfile] = useState({
     name: "Vinay",
     role: "Builder • Startups • Collaboration",
@@ -55,10 +59,13 @@ export default function ProfilePage() {
   });
 
   useEffect(() => {
-    // If you want: load profile from localStorage answers
-    // const raw = localStorage.getItem("profileAnswers");
-    // if (raw) setProfile(p => ({ ...p, name: "Vinay" }));
+    // load profile later (backend/localStorage)
   }, []);
+
+  const go = (path: string, ftab?: FooterTab) => {
+    if (ftab) setFooterTab(ftab);
+    router.push(path);
+  };
 
   const milestones = milestoneByYear[activeYear] || [];
   const shownHistory = historyData.slice(0, historyShown);
@@ -217,42 +224,58 @@ export default function ProfilePage() {
         </button>
       </div>
 
-      {/* Bottom Navigation (same as Home, uniform) */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 h-16 z-40">
-        <div className="h-full grid grid-cols-4">
+      {/* ✅ Footer (same as Explore page) */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 h-16 z-40">
+        <div className="h-full grid grid-cols-5">
           <button
-            onClick={() => router.push("/home")}
-            className="flex flex-col items-center justify-center gap-1 text-slate-500 text-xs"
+            onClick={() => go("/home", "home")}
+            className={`flex flex-col items-center justify-center gap-1 text-[11px] ${
+              footerTab === "home" ? "text-[#2D6BFF] font-semibold" : "text-slate-500"
+            }`}
           >
             <span className="text-lg leading-none">🏠</span>
             <span>Home</span>
           </button>
 
           <button
-            onClick={() => router.push("/messages")}
-            className="flex flex-col items-center justify-center gap-1 text-slate-500 text-xs"
+            onClick={() => go("/explore", "explore")}
+            className={`flex flex-col items-center justify-center gap-1 text-[11px] ${
+              footerTab === "explore" ? "text-[#2D6BFF] font-semibold" : "text-slate-500"
+            }`}
           >
-            <span className="text-lg leading-none">💬</span>
-            <span>Messages</span>
+            <span className="text-lg leading-none">🧭</span>
+            <span>Explore</span>
           </button>
 
           <button
-            onClick={() => router.push("/create")}
-            className="flex flex-col items-center justify-center gap-1 text-slate-500 text-xs"
+            onClick={() => go("/create", "create")}
+            className="flex flex-col items-center justify-center gap-1 text-[11px]"
           >
             <span className="text-lg leading-none">➕</span>
-            <span>Create</span>
+            <span className="text-slate-700 font-semibold">Create</span>
           </button>
 
           <button
-            onClick={() => router.push("/profile")}
-            className="flex flex-col items-center justify-center gap-1 text-[#2D6BFF] text-xs font-semibold"
+            onClick={() => go("/events", "events")}
+            className={`flex flex-col items-center justify-center gap-1 text-[11px] ${
+              footerTab === "events" ? "text-[#2D6BFF] font-semibold" : "text-slate-500"
+            }`}
+          >
+            <span className="text-lg leading-none">📅</span>
+            <span>Events</span>
+          </button>
+
+          <button
+            onClick={() => go("/profile", "profile")}
+            className={`flex flex-col items-center justify-center gap-1 text-[11px] ${
+              footerTab === "profile" ? "text-[#2D6BFF] font-semibold" : "text-slate-500"
+            }`}
           >
             <span className="text-lg leading-none">👤</span>
             <span>Profile</span>
           </button>
         </div>
-      </div>
+      </nav>
     </div>
   );
 }

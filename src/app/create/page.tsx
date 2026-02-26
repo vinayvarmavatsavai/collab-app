@@ -3,8 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+type FooterTab = "home" | "explore" | "create" | "events" | "profile";
+
 export default function CreateCollaborationPage() {
   const router = useRouter();
+
+  const [footerTab, setFooterTab] = useState<FooterTab>("create");
 
   const [form, setForm] = useState({
     title: "",
@@ -18,7 +22,9 @@ export default function CreateCollaborationPage() {
     type: "public",
   });
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
+  function handleChange(
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
 
@@ -27,14 +33,33 @@ export default function CreateCollaborationPage() {
     router.push("/home");
   }
 
+  const go = (path: string, tab?: FooterTab) => {
+    if (tab) setFooterTab(tab);
+    router.push(path);
+  };
+
   return (
-    <div className="min-h-dvh bg-[#F4F6FB] pb-20">
-      
+    <div className="min-h-dvh bg-[#F4F6FB] pb-24 text-slate-900">
+
       {/* Header */}
-      <div className="sticky top-0 bg-white border-b border-slate-200 px-4 py-4">
-        <div className="text-[20px] font-extrabold">Create Collaboration</div>
-        <div className="text-sm text-slate-500">
-          Define your project clearly to attract the right collaborators.
+      <div className="sticky top-0 bg-white border-b border-slate-200 px-4 py-4 z-30">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-[20px] font-extrabold">
+              Create Collaboration
+            </div>
+            <div className="text-sm text-slate-500">
+              Define your project clearly to attract the right collaborators.
+            </div>
+          </div>
+
+          {/* Back button */}
+          <button
+            onClick={() => router.back()}
+            className="text-sm font-semibold text-[#2D6BFF]"
+          >
+            Back
+          </button>
         </div>
       </div>
 
@@ -43,7 +68,9 @@ export default function CreateCollaborationPage() {
 
         {/* Title */}
         <div>
-          <label className="block text-sm font-semibold mb-2">Project Title *</label>
+          <label className="block text-sm font-semibold mb-2">
+            Project Title *
+          </label>
           <input
             name="title"
             value={form.title}
@@ -55,7 +82,9 @@ export default function CreateCollaborationPage() {
 
         {/* Short Description */}
         <div>
-          <label className="block text-sm font-semibold mb-2">Short Description *</label>
+          <label className="block text-sm font-semibold mb-2">
+            Short Description *
+          </label>
           <textarea
             name="shortDesc"
             value={form.shortDesc}
@@ -68,7 +97,9 @@ export default function CreateCollaborationPage() {
 
         {/* Problem Statement */}
         <div>
-          <label className="block text-sm font-semibold mb-2">Problem Statement *</label>
+          <label className="block text-sm font-semibold mb-2">
+            Problem Statement *
+          </label>
           <textarea
             name="problem"
             value={form.problem}
@@ -81,7 +112,9 @@ export default function CreateCollaborationPage() {
 
         {/* Required Skills */}
         <div>
-          <label className="block text-sm font-semibold mb-2">Required Skills *</label>
+          <label className="block text-sm font-semibold mb-2">
+            Required Skills *
+          </label>
           <input
             name="skills"
             value={form.skills}
@@ -93,7 +126,9 @@ export default function CreateCollaborationPage() {
 
         {/* Experience Level */}
         <div>
-          <label className="block text-sm font-semibold mb-2">Experience Level Needed</label>
+          <label className="block text-sm font-semibold mb-2">
+            Experience Level Needed
+          </label>
           <select
             name="experience"
             value={form.experience}
@@ -109,7 +144,9 @@ export default function CreateCollaborationPage() {
 
         {/* Time Commitment */}
         <div>
-          <label className="block text-sm font-semibold mb-2">Weekly Time Commitment *</label>
+          <label className="block text-sm font-semibold mb-2">
+            Weekly Time Commitment *
+          </label>
           <select
             name="hours"
             value={form.hours}
@@ -126,7 +163,9 @@ export default function CreateCollaborationPage() {
 
         {/* Duration */}
         <div>
-          <label className="block text-sm font-semibold mb-2">Project Duration</label>
+          <label className="block text-sm font-semibold mb-2">
+            Project Duration
+          </label>
           <input
             name="duration"
             value={form.duration}
@@ -138,7 +177,9 @@ export default function CreateCollaborationPage() {
 
         {/* Compensation */}
         <div>
-          <label className="block text-sm font-semibold mb-2">Compensation</label>
+          <label className="block text-sm font-semibold mb-2">
+            Compensation
+          </label>
           <select
             name="compensation"
             value={form.compensation}
@@ -154,7 +195,9 @@ export default function CreateCollaborationPage() {
 
         {/* Collaboration Type */}
         <div>
-          <label className="block text-sm font-semibold mb-2">Collaboration Type</label>
+          <label className="block text-sm font-semibold mb-2">
+            Collaboration Type
+          </label>
           <select
             name="type"
             value={form.type}
@@ -175,6 +218,70 @@ export default function CreateCollaborationPage() {
         </button>
 
       </div>
+
+      {/* Footer (same as Home & Explore) */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 h-16 z-40">
+        <div className="h-full grid grid-cols-5">
+
+          <button
+            onClick={() => go("/home", "home")}
+            className={`flex flex-col items-center justify-center gap-1 text-xs ${
+              footerTab === "home"
+                ? "text-[#2D6BFF] font-semibold"
+                : "text-slate-500"
+            }`}
+          >
+            <span className="text-lg leading-none">🏠</span>
+            <span>Home</span>
+          </button>
+
+          <button
+            onClick={() => go("/explore", "explore")}
+            className={`flex flex-col items-center justify-center gap-1 text-xs ${
+              footerTab === "explore"
+                ? "text-[#2D6BFF] font-semibold"
+                : "text-slate-500"
+            }`}
+          >
+            <span className="text-lg leading-none">🧭</span>
+            <span>Explore</span>
+          </button>
+
+          <button
+            onClick={() => go("/create", "create")}
+            className="flex flex-col items-center justify-center gap-1 text-xs"
+          >
+            <span className="text-lg leading-none">➕</span>
+            <span className="text-slate-700 font-semibold">Create</span>
+          </button>
+
+          <button
+            onClick={() => go("/events", "events")}
+            className={`flex flex-col items-center justify-center gap-1 text-xs ${
+              footerTab === "events"
+                ? "text-[#2D6BFF] font-semibold"
+                : "text-slate-500"
+            }`}
+          >
+            <span className="text-lg leading-none">📅</span>
+            <span>Events</span>
+          </button>
+
+          <button
+            onClick={() => go("/profile", "profile")}
+            className={`flex flex-col items-center justify-center gap-1 text-xs ${
+              footerTab === "profile"
+                ? "text-[#2D6BFF] font-semibold"
+                : "text-slate-500"
+            }`}
+          >
+            <span className="text-lg leading-none">👤</span>
+            <span>Profile</span>
+          </button>
+
+        </div>
+      </nav>
+
     </div>
   );
 }
