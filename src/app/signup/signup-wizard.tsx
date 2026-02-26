@@ -1,8 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronLeft } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
 import { RoleSelection, type Role } from "@/components/signup/role-selection"
 import { StartupForm } from "@/components/signup/startup-form"
 import { StudentForm } from "@/components/signup/student-form"
@@ -15,11 +14,8 @@ const roleLabels: Record<Role, string> = {
   ecosystem: "Ecosystem Player",
 }
 
-interface SignupWizardProps {
-  onComplete: () => void
-}
-
-export function SignupWizard({ onComplete }: SignupWizardProps) {
+export function SignupWizard() {
+  const router = useRouter()
   const [currentStep, setCurrentStep] = useState(0)
   const [selectedRole, setSelectedRole] = useState<Role>("startup")
   const [isAnimating, setIsAnimating] = useState(false)
@@ -41,6 +37,11 @@ export function SignupWizard({ onComplete }: SignupWizardProps) {
     }, 150)
   }
 
+  const handleCreateAccount = () => {
+    localStorage.setItem("signupCompleted", "true")
+    router.push("/onboarding")
+  }
+
   return (
     <main className="flex min-h-screen items-start justify-center px-4 py-12 sm:items-center sm:py-16">
       <div
@@ -55,15 +56,13 @@ export function SignupWizard({ onComplete }: SignupWizardProps) {
           <div className="mx-auto w-full max-w-lg">
             <div className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
               <div className="mb-8 flex flex-col gap-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <button
+                  type="button"
                   onClick={handleBack}
-                  className="-ml-2 mb-3 w-fit text-muted-foreground hover:text-foreground"
+                  className="-ml-2 mb-3 w-fit rounded-md px-2 py-1 text-sm text-muted-foreground hover:text-foreground"
                 >
-                  <ChevronLeft className="size-4" />
-                  Back
-                </Button>
+                  ← Back
+                </button>
                 <h1 className="text-2xl font-semibold tracking-tight text-foreground">
                   Sign up as a {roleLabels[selectedRole]}
                 </h1>
@@ -76,12 +75,13 @@ export function SignupWizard({ onComplete }: SignupWizardProps) {
               {selectedRole === "student" && <StudentForm />}
               {selectedRole === "ecosystem" && <EcosystemForm />}
 
-              <Button
-                onClick={onComplete}
+              <button
+                type="button"
+                onClick={handleCreateAccount}
                 className="mt-8 h-11 w-full rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium"
               >
                 Create Account
-              </Button>
+              </button>
 
               <p className="mt-4 text-center text-xs text-muted-foreground">
                 {"By creating an account, you agree to our "}
