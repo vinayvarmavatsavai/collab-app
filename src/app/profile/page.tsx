@@ -48,7 +48,7 @@ export default function ProfilePage() {
   const [historyShown, setHistoryShown] = useState(1);
 
   // Demo profile (later from backend)
-  const [profile, setProfile] = useState({
+  const [profile] = useState({
     name: "Vinay",
     role: "Builder • Startups • Collaboration",
     location: "India",
