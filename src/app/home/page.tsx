@@ -228,7 +228,16 @@ export default function HomePage() {
             activeCollabs.map((c) => (
               <div
                 key={c.id}
-                className="min-w-[320px] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                onClick={() => go(`/project/${c.id}`)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    go(`/project/${c.id}`);
+                  }
+                }}
+                className="min-w-[320px] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm cursor-pointer"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
@@ -252,7 +261,18 @@ export default function HomePage() {
                   {c.quickLinks.map((q) => (
                     <button
                       key={q.label}
-                      onClick={() => go(q.path)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        if (q.label === "Calendar") {
+                          go(`/project/${c.id}/calendar`);
+                          return;
+                        }
+                        if (q.label === "Milestones") {
+                          go(`/project/${c.id}`);
+                          return;
+                        }
+                        go(q.path);
+                      }}
                       className="text-[11px] px-3 py-1 rounded-full border border-slate-200 bg-slate-50 text-slate-700 font-semibold"
                     >
                       {q.label}
