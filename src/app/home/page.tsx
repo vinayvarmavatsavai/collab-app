@@ -9,7 +9,7 @@ type ActiveCollab = {
   status: "Active" | "Paused";
   deadline: string;
   sprintsLeft: string;
-  quickLinks: Array<{ label: "Milestones" | "Calendar" | "Post"; path: string }>;
+  quickLinks: Array<{ label: "Workspace" | "Milestones" | "Meetings"; path: string }>;
 };
 
 type ActivityPost = {
@@ -80,51 +80,45 @@ export default function HomePage() {
     {}
   );
 
-  useEffect(() => {
-    setName(getDisplayName());
+useEffect(() => {
+  setName(getDisplayName());
 
-    try {
-      const raw = localStorage.getItem(ACTIVE_COLLABS_KEY);
-      const parsed = raw ? JSON.parse(raw) : null;
+  try {
+    const raw = localStorage.getItem(ACTIVE_COLLABS_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
 
-      if (Array.isArray(parsed) && parsed.length) {
-        setActiveCollabs(parsed);
-      } else {
-        setActiveCollabs([
-          {
-            id: 901,
-            title: "AI Model Optimization",
-            status: "Active",
-            deadline: "Deadline: 10/03/2026",
-            sprintsLeft: "2 sprints left",
-            quickLinks: [
-              { label: "Milestones", path: "/milestones" },
-              { label: "Calendar", path: "/calendar" },
-              { label: "Post", path: "/create" },
-            ],
-          },
-          {
-            id: 902,
-            title: "Robotics Sensor Fusion",
-            status: "Active",
-            deadline: "Deadline: 22/03/2026",
-            sprintsLeft: "1 sprint left",
-            quickLinks: [
-              { label: "Milestones", path: "/milestones" },
-              { label: "Calendar", path: "/calendar" },
-              { label: "Post", path: "/create" },
-            ],
-          },
-        ]);
-      }
-    } catch {
-      setActiveCollabs([]);
+    if (Array.isArray(parsed) && parsed.length) {
+      setActiveCollabs(parsed);
+    } else {
+      setActiveCollabs([
+        {
+          id: 901,
+          title: "AI Model Optimization",
+          status: "Active",
+          deadline: "Deadline: 10/03/2026",
+          sprintsLeft: "2 sprints left",
+          quickLinks: [
+            { label: "Workspace", path: "/projects/sphere-ai-collab" },
+            {
+              label: "Milestones",
+              path: "/projects/sphere-ai-collab?tab=Milestones",
+            },
+            {
+              label: "Meetings",
+              path: "/projects/sphere-ai-collab/meetings",
+            },
+          ],
+        },
+      ]);
     }
+  } catch {
+    setActiveCollabs([]);
+  }
 
-    const init: Record<number, number> = {};
-    for (const p of mockActivity) init[p.id] = 0;
-    setImgIndexByPost(init);
-  }, []);
+  const init: Record<number, number> = {};
+  for (const p of mockActivity) init[p.id] = 0;
+  setImgIndexByPost(init);
+}, []);
 
   const headerSubtitle = useMemo(() => {
     return "Here are collaborations matched to your profile";

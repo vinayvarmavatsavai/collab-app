@@ -81,3 +81,36 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+/* ===== Modern Minimal Scrollbars ===== */
+
+/* width */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+/* track */
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* handle */
+::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+:hover::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+}
+
+/* hide arrows */
+::-webkit-scrollbar-button {
+  display: none;
+}
+
+/* Firefox support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.25) transparent;
+}

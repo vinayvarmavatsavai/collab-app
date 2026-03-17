@@ -2,7 +2,20 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-
+import {
+  APPLIED_REQUESTS_KEY,
+  MY_REQUESTS_KEY,
+  SAVED_REQUESTS_KEY,
+  addRequestApplicant,
+  getAppliedRequestIds,
+  getMyRequests,
+  getProfileDisplayName,
+  getProfileRoleLabel,
+  removeRequestApplicant,
+  saveAppliedRequestIds,
+  saveSavedRequestIds,
+  type CollaborationPost,
+} from "@/lib/collaboration";
 type FooterTab = "home" | "explore" | "create" | "events" | "profile";
 
 type ExploreView =
@@ -12,17 +25,7 @@ type ExploreView =
   | "interests"
   | "startup-spotlight";
 
-type CollaborationPost = {
-  id: number;
-  title: string;
-  by: string;
-  role: string;
-  skills: string[];
-  type: "Public" | "Private";
-  mode: "Online" | "In-person";
-  hours: string;
-  interestTags: string[];
-};
+
 
 const mockAllRequests: CollaborationPost[] = [
   {
@@ -90,8 +93,7 @@ const INTERESTS = [
   { key: "ai", label: "AI", emoji: "🧠" },
 ];
 
-const SAVED_KEY = "savedRequests_v1";
-const MY_REQUESTS_KEY = "myRequests_v1";
+
 
 function getDisplayName(): string {
   try {
@@ -127,53 +129,75 @@ export default function ExplorePage() {
   const [myRequests, setMyRequests] = useState<CollaborationPost[]>([]);
 
   useEffect(() => {
-    setName(getDisplayName());
+  setName(getDisplayName());
 
-    try {
-      const raw = localStorage.getItem(SAVED_KEY);
-      const parsed = raw ? JSON.parse(raw) : [];
-      if (Array.isArray(parsed)) setSavedIds(parsed);
-    } catch {}
+  try {
+    const raw = localStorage.getItem(SAVED_REQUESTS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(parsed)) setSavedIds(parsed);
+  } catch {}
 
-    try {
-      const raw = localStorage.getItem(MY_REQUESTS_KEY);
-      const parsed = raw ? JSON.parse(raw) : [];
-      if (Array.isArray(parsed)) setMyRequests(parsed);
-      else setMyRequests([]);
-    } catch {
-      setMyRequests([]);
-    }
-  }, []);
+  try {
+    setAppliedIds(getAppliedRequestIds());
+  } catch {
+    setAppliedIds([]);
+  }
+
+  try {
+    setMyRequests(getMyRequests());
+  } catch {
+    setMyRequests([]);
+  }
+}, []);
 
   const go = (path: string, ftab?: FooterTab) => {
     if (ftab) setFooterTab(ftab);
     router.push(path);
   };
 
-  const toggleSave = (id: number) => {
-    const next = savedIds.includes(id)
-      ? savedIds.filter((x) => x !== id)
-      : [...savedIds, id];
+ const toggleSave = (id: number) => {
+  const next = savedIds.includes(id)
+    ? savedIds.filter((x) => x !== id)
+    : [...savedIds, id];
 
-    setSavedIds(next);
-    localStorage.setItem(SAVED_KEY, JSON.stringify(next));
-  };
+  setSavedIds(next);
+  saveSavedRequestIds(next);
+};
 
-  const toggleApply = (id: number) => {
-    const next = appliedIds.includes(id)
-      ? appliedIds.filter((x) => x !== id)
-      : [...appliedIds, id];
+const toggleApply = (id: number) => {
+  const next = appliedIds.includes(id)
+    ? appliedIds.filter((x) => x !== id)
+    : [...appliedIds, id];
 
-    setAppliedIds(next);
-  };
+  setAppliedIds(next);
+  saveAppliedRequestIds(next);
 
-  const baseList = useMemo(() => {
-    if (view === "startup-spotlight") return [];
-    if (view === "recommended") return mockAllRequests.slice(0, 3);
-    if (view === "requests") return mockAllRequests;
-    if (view === "my-requests") return myRequests;
-    return mockAllRequests;
-  }, [view, myRequests]);
+  if (appliedIds.includes(id)) {
+    removeRequestApplicant(id, getProfileDisplayName());
+  } else {
+    addRequestApplicant({
+      requestId: id,
+      applicantName: getProfileDisplayName(),
+      applicantRole: getProfileRoleLabel(),
+    });
+  }
+};
+const allRequests = useMemo(() => {
+  const mine = [...myRequests];
+  const others = mockAllRequests.filter(
+    (mock) => !mine.some((item) => item.id === mock.id),
+  );
+
+  return [...mine, ...others];
+}, [myRequests]);
+
+ const baseList = useMemo(() => {
+  if (view === "startup-spotlight") return [];
+  if (view === "recommended") return allRequests.slice(0, 3);
+  if (view === "requests") return allRequests;
+  if (view === "my-requests") return myRequests;
+  return allRequests;
+}, [view, myRequests, allRequests]);
 
   const visible = useMemo(() => {
     let list = baseList;
@@ -419,11 +443,11 @@ export default function ExplorePage() {
 
         <div className="mt-4 flex gap-2">
           <button
-            onClick={() => alert(`Demo: open request ${p.id}`)}
-            className="flex-1 px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold"
-          >
-            View
-          </button>
+  onClick={() => router.push(`/explore/${p.id}`)}
+  className="flex-1 rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700"
+>
+  View
+</button>
 
           <button
             onClick={() => toggleApply(p.id)}
