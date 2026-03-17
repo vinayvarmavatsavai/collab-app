@@ -9,7 +9,10 @@ type ActiveCollab = {
   status: "Active" | "Paused";
   deadline: string;
   sprintsLeft: string;
-  quickLinks: Array<{ label: "Workspace" | "Milestones" | "Meetings"; path: string }>;
+  quickLinks: Array<{
+    label: "Workspace" | "Milestones" | "Meetings";
+    path: string;
+  }>;
 };
 
 type ActivityPost = {
@@ -77,48 +80,48 @@ export default function HomePage() {
 
   const [activeCollabs, setActiveCollabs] = useState<ActiveCollab[]>([]);
   const [imgIndexByPost, setImgIndexByPost] = useState<Record<number, number>>(
-    {}
+    {},
   );
 
-useEffect(() => {
-  setName(getDisplayName());
+  useEffect(() => {
+    setName(getDisplayName());
 
-  try {
-    const raw = localStorage.getItem(ACTIVE_COLLABS_KEY);
-    const parsed = raw ? JSON.parse(raw) : null;
+    try {
+      const raw = localStorage.getItem(ACTIVE_COLLABS_KEY);
+      const parsed = raw ? JSON.parse(raw) : null;
 
-    if (Array.isArray(parsed) && parsed.length) {
-      setActiveCollabs(parsed);
-    } else {
-      setActiveCollabs([
-        {
-          id: 901,
-          title: "AI Model Optimization",
-          status: "Active",
-          deadline: "Deadline: 10/03/2026",
-          sprintsLeft: "2 sprints left",
-          quickLinks: [
-            { label: "Workspace", path: "/projects/sphere-ai-collab" },
-            {
-              label: "Milestones",
-              path: "/projects/sphere-ai-collab?tab=Milestones",
-            },
-            {
-              label: "Meetings",
-              path: "/projects/sphere-ai-collab/meetings",
-            },
-          ],
-        },
-      ]);
+      if (Array.isArray(parsed) && parsed.length) {
+        setActiveCollabs(parsed);
+      } else {
+        setActiveCollabs([
+          {
+            id: 901,
+            title: "AI Model Optimization",
+            status: "Active",
+            deadline: "Deadline: 10/03/2026",
+            sprintsLeft: "2 sprints left",
+            quickLinks: [
+              { label: "Workspace", path: "/projects/sphere-ai-collab" },
+              {
+                label: "Milestones",
+                path: "/projects/sphere-ai-collab",
+              },
+              {
+                label: "Meetings",
+                path: "/projects/sphere-ai-collab/meetings",
+              },
+            ],
+          },
+        ]);
+      }
+    } catch {
+      setActiveCollabs([]);
     }
-  } catch {
-    setActiveCollabs([]);
-  }
 
-  const init: Record<number, number> = {};
-  for (const p of mockActivity) init[p.id] = 0;
-  setImgIndexByPost(init);
-}, []);
+    const init: Record<number, number> = {};
+    for (const p of mockActivity) init[p.id] = 0;
+    setImgIndexByPost(init);
+  }, []);
 
   const headerSubtitle = useMemo(() => {
     return "Here are collaborations matched to your profile";
@@ -150,12 +153,11 @@ useEffect(() => {
   };
 
   return (
-    <div className="min-h-screen pb-24 bg-[#F4F6FB] text-slate-900 px-4 py-6">
-      {/* Header */}
+    <div className="min-h-screen bg-[#F4F6FB] px-4 py-6 pb-24 text-slate-900">
       <div className="mb-6 flex items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Welcome back, {name} 👋</h1>
-          <p className="text-slate-500 text-sm">{headerSubtitle}</p>
+          <p className="text-sm text-slate-500">{headerSubtitle}</p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -163,14 +165,14 @@ useEffect(() => {
             aria-label="Notifications"
             title="Notifications"
             onClick={() => go("/notifications")}
-            className="h-10 w-10 rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition flex items-center justify-center"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
           >
             <span className="text-lg leading-none">🔔</span>
           </button>
 
           <button
             onClick={() => router.push("/qr")}
-            className="h-10 w-10 rounded-xl border border-slate-200 bg-white shadow-sm flex items-center justify-center"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm"
             aria-label="QR"
             title="QR"
           >
@@ -185,16 +187,15 @@ useEffect(() => {
             aria-label="Messages"
             title="Messages"
             onClick={() => go("/messages")}
-            className="h-10 w-10 rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition flex items-center justify-center"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
           >
             <span className="text-lg leading-none">💬</span>
           </button>
         </div>
       </div>
 
-      {/* Active collaborations */}
       <section className="mb-8">
-        <div className="flex items-center justify-between mb-3">
+        <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-semibold">Active collaborations:</h2>
           <button
             onClick={() => go("/explore", "explore")}
@@ -208,12 +209,12 @@ useEffect(() => {
           {activeCollabs.length === 0 ? (
             <div className="min-w-[320px] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <div className="font-semibold">No active collaborations yet</div>
-              <div className="text-sm text-slate-500 mt-1">
+              <div className="mt-1 text-sm text-slate-500">
                 Once a request is accepted, it will appear here.
               </div>
               <button
                 onClick={() => go("/explore", "explore")}
-                className="mt-4 w-full py-2 rounded-xl bg-[#2D6BFF] text-white font-semibold"
+                className="mt-4 w-full rounded-xl bg-[#2D6BFF] py-2 font-semibold text-white"
               >
                 Explore Requests
               </button>
@@ -222,18 +223,27 @@ useEffect(() => {
             activeCollabs.map((c) => (
               <div
                 key={c.id}
-                className="min-w-[320px] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                onClick={() => go(c.quickLinks[0]?.path || "/projects")}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    go(c.quickLinks[0]?.path || "/projects");
+                  }
+                }}
+                className="min-w-[320px] cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="font-semibold truncate">{c.title}</div>
-                    <div className="text-xs text-slate-500 mt-1">
+                    <div className="truncate font-semibold">{c.title}</div>
+                    <div className="mt-1 text-xs text-slate-500">
                       {c.deadline}
                     </div>
                   </div>
 
                   <div className="flex flex-col items-end gap-1">
-                    <span className="text-[11px] px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 font-semibold">
+                    <span className="rounded-full bg-emerald-100 px-2 py-1 text-[11px] font-semibold text-emerald-700">
                       {c.status}
                     </span>
                     <span className="text-[11px] text-slate-500">
@@ -242,12 +252,15 @@ useEffect(() => {
                   </div>
                 </div>
 
-                <div className="mt-3 flex gap-2 flex-wrap">
+                <div className="mt-3 flex flex-wrap gap-2">
                   {c.quickLinks.map((q) => (
                     <button
                       key={q.label}
-                      onClick={() => go(q.path)}
-                      className="text-[11px] px-3 py-1 rounded-full border border-slate-200 bg-slate-50 text-slate-700 font-semibold"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        go(q.path);
+                      }}
+                      className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-700"
                     >
                       {q.label}
                     </button>
@@ -259,9 +272,8 @@ useEffect(() => {
         </div>
       </section>
 
-      {/* Activity */}
       <section>
-        <div className="flex items-center justify-between mb-3">
+        <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-semibold">Activity</h2>
           <button
             onClick={() => go("/explore", "explore")}
@@ -283,12 +295,12 @@ useEffect(() => {
                 className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="h-9 w-9 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-700">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-200 font-bold text-slate-700">
                       {p.logoText}
                     </div>
                     <div className="min-w-0">
-                      <div className="font-semibold truncate">{p.orgName}</div>
+                      <div className="truncate font-semibold">{p.orgName}</div>
                       <div className="text-xs text-slate-500">
                         {p.orgSubtitle}
                       </div>
@@ -298,7 +310,7 @@ useEffect(() => {
                   <span className="text-xs text-slate-400">{p.time}</span>
                 </div>
 
-                <div className="mt-3 relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-100">
+                <div className="relative mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
                   <div className="aspect-[16/10] w-full">
                     <img
                       src={p.images[idx]}
@@ -312,7 +324,7 @@ useEffect(() => {
                     <>
                       <button
                         onClick={() => prevImg(p.id, total)}
-                        className="absolute left-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-white/90 border border-slate-200 shadow flex items-center justify-center"
+                        className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/90 shadow"
                         aria-label="Previous image"
                         title="Previous"
                       >
@@ -320,7 +332,7 @@ useEffect(() => {
                       </button>
                       <button
                         onClick={() => nextImg(p.id, total)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-white/90 border border-slate-200 shadow flex items-center justify-center"
+                        className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/90 shadow"
                         aria-label="Next image"
                         title="Next"
                       >
@@ -331,18 +343,18 @@ useEffect(() => {
 
                   <div className="absolute bottom-2 left-3 right-3">
                     <div className="flex items-center gap-2">
-                      <div className="relative flex-1 h-2 rounded-full bg-white/70 overflow-hidden">
+                      <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-white/70">
                         <div
                           className="absolute left-0 top-0 h-full bg-white"
                           style={{ width: `${progressPct}%` }}
                         />
                         <div
-                          className="absolute top-1/2 -translate-y-1/2 h-4 w-4 rounded-full bg-white border border-slate-300 shadow"
+                          className="absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full border border-slate-300 bg-white shadow"
                           style={{ left: `calc(${progressPct}% - 8px)` }}
                         />
                       </div>
 
-                      <div className="text-[11px] px-2 py-1 rounded-full bg-white/90 border border-slate-200 text-slate-700 font-semibold">
+                      <div className="rounded-full border border-slate-200 bg-white/90 px-2 py-1 text-[11px] font-semibold text-slate-700">
                         {idx + 1}/{total}
                       </div>
                     </div>
@@ -366,21 +378,20 @@ useEffect(() => {
                   </div>
                 </div>
 
-                <p className="text-slate-600 text-sm mt-3">{p.text}</p>
+                <p className="mt-3 text-sm text-slate-600">{p.text}</p>
               </div>
             );
           })}
         </div>
       </section>
 
-      {/* Footer */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 h-16 z-40">
-        <div className="h-full grid grid-cols-5">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 h-16 border-t border-slate-200 bg-white">
+        <div className="grid h-full grid-cols-5">
           <button
             onClick={() => go("/home", "home")}
             className={`flex flex-col items-center justify-center gap-1 text-xs ${
               activeTab === "home"
-                ? "text-[#2D6BFF] font-semibold"
+                ? "font-semibold text-[#2D6BFF]"
                 : "text-slate-500"
             }`}
           >
@@ -392,7 +403,7 @@ useEffect(() => {
             onClick={() => go("/explore", "explore")}
             className={`flex flex-col items-center justify-center gap-1 text-xs ${
               activeTab === "explore"
-                ? "text-[#2D6BFF] font-semibold"
+                ? "font-semibold text-[#2D6BFF]"
                 : "text-slate-500"
             }`}
           >
@@ -405,14 +416,14 @@ useEffect(() => {
             className="flex flex-col items-center justify-center gap-1 text-xs"
           >
             <span className="text-lg leading-none">➕</span>
-            <span className="text-slate-700 font-semibold">Create</span>
+            <span className="font-semibold text-slate-700">Create</span>
           </button>
 
           <button
             onClick={() => go("/events", "events")}
             className={`flex flex-col items-center justify-center gap-1 text-xs ${
               activeTab === "events"
-                ? "text-[#2D6BFF] font-semibold"
+                ? "font-semibold text-[#2D6BFF]"
                 : "text-slate-500"
             }`}
           >
@@ -424,7 +435,7 @@ useEffect(() => {
             onClick={() => go("/profile", "profile")}
             className={`flex flex-col items-center justify-center gap-1 text-xs ${
               activeTab === "profile"
-                ? "text-[#2D6BFF] font-semibold"
+                ? "font-semibold text-[#2D6BFF]"
                 : "text-slate-500"
             }`}
           >
