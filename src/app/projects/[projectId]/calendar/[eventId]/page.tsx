@@ -6,9 +6,9 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/app/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/ui/card";
 import { ConfirmationModal } from "@/app/projects/components/meetings";
-import type { CalendarEvent } from "@/app/project/mock/mockEvents";
+import type { CalendarEvent } from "@/app/projects/mock/mockEvents";
 import { getEventById, removeEvent } from "@/app/projects/utils/event-store";
-import { getProjectById } from "@/app/project/mock/mockProjects";
+import { getProjectById } from "@/app/projects/mock/mockProjects";
 
 export default function MeetingDetailsPage({
   params,

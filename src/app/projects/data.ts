@@ -43,7 +43,6 @@ export type ProjectItem = {
   category: string;
   createdBy: string;
   dueDate: string;
-  progress: number;
   team: TeamMember[];
   tasks: TaskItem[];
   milestones: MilestoneItem[];
@@ -60,7 +59,6 @@ export const projects: ProjectItem[] = [
     category: "Startup Collaboration",
     createdBy: "Vinay",
     dueDate: "2026-03-30",
-    progress: 68,
     team: [
       {
         id: 1,
