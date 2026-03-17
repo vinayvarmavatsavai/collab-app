@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MeetingForm, toMeetingFormValue, type MeetingFormValue } from "@/app/projects/components/meetings";
-import type { CalendarEvent } from "@/app/project/mock/mockEvents";
+import type { CalendarEvent } from "@/app/projects/mock/mockEvents";
 import { getEventById, hasEventOverlap, updateEvent } from "@/app/projects/utils/event-store";
 import { parseEventDateTime } from "@/app/projects/utils/date";
 

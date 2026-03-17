@@ -3,9 +3,9 @@
 import { use, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AvailabilityGrid, DatePicker } from "@/app/projects/components/meetings";
-import type { AvailabilitySlot } from "@/app/project/mock/mockAvailability";
-import { mockAvailability } from "@/app/project/mock/mockAvailability";
-import { mockUsers } from "@/app/project/mock/mockUsers";
+import type { AvailabilitySlot } from "@/app/projects/mock/mockAvailability";
+import { mockAvailability } from "@/app/projects/mock/mockAvailability";
+import { mockUsers } from "@/app/projects/mock/mockUsers";
 import { Button } from "@/app/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/ui/card";
 import { Input } from "@/app/ui/input";
