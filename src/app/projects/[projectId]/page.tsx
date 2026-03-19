@@ -375,11 +375,10 @@ function BoardColumn({
 
   return (
     <div
-      className={`flex h-[72vh] w-[290px] shrink-0 flex-col rounded-2xl border bg-slate-50 transition ${
-        isOver
+      className={`flex h-[72vh] w-[290px] shrink-0 flex-col rounded-2xl border bg-slate-50 transition ${isOver
           ? "border-violet-300 ring-2 ring-violet-100"
           : "border-slate-200"
-      }`}
+        }`}
     >
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3">
         <h3 className="font-semibold text-slate-800">{column.title}</h3>
@@ -395,11 +394,10 @@ function BoardColumn({
         >
           {column.tasks.length === 0 ? (
             <div
-              className={`rounded-xl border border-dashed bg-white p-4 text-center text-sm transition ${
-                isOver
+              className={`rounded-xl border border-dashed bg-white p-4 text-center text-sm transition ${isOver
                   ? "border-violet-300 text-violet-700"
                   : "border-slate-200 text-slate-500"
-              }`}
+                }`}
             >
               Drop task here
             </div>
@@ -424,31 +422,31 @@ export default function ProjectWorkspacePage() {
   const params = useParams<{ projectId: string }>();
   const projectId = params?.projectId;
 
-const initialProject = useMemo(() => {
-  const localProjects = getStoredProjects();
-  return (
-    localProjects.find((item) => item.id === projectId) ||
-    projects.find((item) => item.id === projectId) ||
-    null
-  );
-}, [projectId]);
+  const initialProject = useMemo(() => {
+    const localProjects = getStoredProjects();
+    return (
+      localProjects.find((item) => item.id === projectId) ||
+      projects.find((item) => item.id === projectId) ||
+      null
+    );
+  }, [projectId]);
 
   const [projectState, setProjectState] = useState<ProjectItem | null>(
     initialProject,
   );
   useEffect(() => {
-  if (!projectState) return;
+    if (!projectState) return;
 
-  const localProjects = getStoredProjects();
-  const existsInLocal = localProjects.some((item) => item.id === projectState.id);
+    const localProjects = getStoredProjects();
+    const existsInLocal = localProjects.some((item) => item.id === projectState.id);
 
-  if (existsInLocal) {
-    const next = localProjects.map((item) =>
-      item.id === projectState.id ? (projectState as any) : item,
-    );
-    saveStoredProjects(next);
-  }
-}, [projectState]);
+    if (existsInLocal) {
+      const next = localProjects.map((item) =>
+        item.id === projectState.id ? (projectState as any) : item,
+      );
+      saveStoredProjects(next);
+    }
+  }, [projectState]);
 
   const [activeTab, setActiveTab] = useState<WorkspaceTab>("Overview");
 
@@ -908,13 +906,13 @@ const initialProject = useMemo(() => {
     const updatedTasks = projectState!.tasks.map((task) =>
       task.id === editingTaskId
         ? {
-            ...task,
-            title: trimmedTitle,
-            assignee: trimmedAssignee,
-            priority: editTaskPriority,
-            status: editTaskStatus,
-            dueDate: editTaskDueDate,
-          }
+          ...task,
+          title: trimmedTitle,
+          assignee: trimmedAssignee,
+          priority: editTaskPriority,
+          status: editTaskStatus,
+          dueDate: editTaskDueDate,
+        }
         : task,
     );
 
@@ -1155,14 +1153,14 @@ const initialProject = useMemo(() => {
     const updatedMilestones = projectState!.milestones.map((milestone) =>
       milestone.id === editingMilestoneId
         ? {
-            ...milestone,
-            title: trimmedTitle,
-            description: trimmedDescription,
-            dueDate: editMilestoneDueDate,
-            owner: trimmedOwner,
-            priority: editMilestonePriority,
-            linkedTaskIds: editMilestoneLinkedTaskIds,
-          }
+          ...milestone,
+          title: trimmedTitle,
+          description: trimmedDescription,
+          dueDate: editMilestoneDueDate,
+          owner: trimmedOwner,
+          priority: editMilestonePriority,
+          linkedTaskIds: editMilestoneLinkedTaskIds,
+        }
         : milestone,
     );
 
@@ -1267,6 +1265,12 @@ const initialProject = useMemo(() => {
                 >
                   Post Update
                 </button>
+                <Link
+                  href="/sharedspace"
+                  className="rounded-xl border border-white/30 bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
+                >
+                  Shared Space
+                </Link>
               </div>
             </div>
 
@@ -1320,11 +1324,10 @@ const initialProject = useMemo(() => {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`rounded-2xl px-4 py-2 text-sm font-semibold transition ${
-                  activeTab === tab
+                className={`rounded-2xl px-4 py-2 text-sm font-semibold transition ${activeTab === tab
                     ? "bg-slate-900 text-white shadow-sm"
                     : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                }`}
+                  }`}
               >
                 {tab}
               </button>

@@ -331,10 +331,14 @@ export type StoredProjectItem = {
 };
 
 export function getStoredProjects(): StoredProjectItem[] {
-  return safeParse<StoredProjectItem[]>(
-    localStorage.getItem(PROJECTS_STORAGE_KEY),
-    [],
-  );
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = window.localStorage.getItem(PROJECTS_STORAGE_KEY);
+    return safeParse<StoredProjectItem[]>(raw, []);
+  } catch {
+    return [];
+  }
 }
 
 export function saveStoredProjects(projects: StoredProjectItem[]) {
