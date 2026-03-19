@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -12,13 +12,19 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// file: src/app/layout.tsx
-
-
 export const metadata: Metadata = {
   title: "SphereNet",
+  description: "Connect, collaborate, and grow with your innovation community",
   applicationName: "SphereNet",
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/icon-512.ico" },
+      { url: "/icon-512.png", type: "image/png" },
+    ],
+    apple: "/icon-512.png",
+    shortcut: "/icon-512.ico",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -37,9 +43,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {children}
       </body>
     </html>
