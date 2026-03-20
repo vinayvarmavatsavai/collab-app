@@ -414,11 +414,6 @@ body {
 .leaflet-container {
   height: 100%;
   width: 100%;
-}
-
-.leaflet-container {
-  height: 100%;
-  width: 100%;
   z-index: 1;
 }
 
@@ -426,6 +421,26 @@ body {
 .leaflet-top,
 .leaflet-bottom {
   z-index: 10;
+}
+
+.leaflet-control-attribution {
+  margin: 10px !important;
+  border-radius: 10px !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  padding: 4px 8px !important;
+  font-size: 11px !important;
+}
+
+.leaflet-top .leaflet-control-attribution {
+  margin-top: 88px !important;
+}
+
+.leaflet-bottom.leaflet-right {
+  display: none !important;
+}
+
+.leaflet-top.leaflet-right {
+  display: block !important;
 }
 
 @keyframes slideUp {
