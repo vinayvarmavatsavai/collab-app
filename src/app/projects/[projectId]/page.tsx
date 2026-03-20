@@ -1103,11 +1103,15 @@ function getNextMilestoneId() {
       time: formatTimeNow(),
     };
 
-    setProjectState({
-      ...projectState,
-      milestones: [createdMilestone, ...projectState.milestones],
-      activity: [milestoneActivity, ...projectState.activity],
-    });
+   if (!projectState) return;
+
+const currentProject: ProjectItem = projectState;
+
+setProjectState({
+  ...currentProject,
+  milestones: [createdMilestone, ...currentProject.milestones],
+  activity: [milestoneActivity, ...currentProject.activity],
+});
 
     closeAddMilestoneModal();
   }
@@ -3188,4 +3192,4 @@ function getNextMilestoneId() {
       )}
     </main>
   );
-} 
+} }
