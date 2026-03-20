@@ -19,14 +19,14 @@ export function MessagingPage() {
     const signupCompleted = localStorage.getItem("signupCompleted") === "true"
     const profileCompleted = localStorage.getItem("profileCompleted") === "true"
 
-    if (!signupCompleted) {
+    /*if (!signupCompleted) {
       router.replace("/")
       return
     }
 
     if (!profileCompleted) {
-      router.replace("/onboarding")
-    }
+      /router.replace("/onboarding")
+    }*/
   }, [router])
 
   const activeContact = contacts.find((c) => c.id === activeChatId) ?? contacts[0]
