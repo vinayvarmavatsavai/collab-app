@@ -687,7 +687,7 @@ function getNextMilestoneId() {
 
   function resetTaskForm() {
     setNewTaskTitle("");
-    setNewTaskAssignee(!projectState.team[0]?.name || "");
+    setNewTaskAssignee(projectState?.team[0]?.name || "");
     setNewTaskPriority("Medium");
     setNewTaskStatus("Todo");
     setNewTaskDueDate("");
@@ -697,7 +697,7 @@ function getNextMilestoneId() {
   function openAddTaskModal() {
     setIsAddTaskOpen(true);
     setNewTaskTitle("");
-    setNewTaskAssignee(!projectState.team[0]?.name || "");
+    setNewTaskAssignee(projectState?.team[0]?.name || "");
     setNewTaskPriority("Medium");
     setNewTaskStatus("Todo");
     setNewTaskDueDate("");
@@ -766,7 +766,7 @@ function getNextMilestoneId() {
   function resetMilestoneForm() {
     setMilestoneTitle("");
     setMilestoneDescription("");
-    setMilestoneOwner(!projectState.team[0]?.name || "");
+    setMilestoneOwner(projectState?.team[0]?.name || "");
     setMilestonePriority("Medium");
     setMilestoneDueDate("");
     setMilestoneLinkedTaskIds([]);
@@ -777,7 +777,7 @@ function getNextMilestoneId() {
     setIsAddMilestoneOpen(true);
     setMilestoneTitle("");
     setMilestoneDescription("");
-    setMilestoneOwner(!projectState.team[0]?.name || "");
+    setMilestoneOwner(projectState?.team[0]?.name || "");
     setMilestonePriority("Medium");
     setMilestoneDueDate("");
     setMilestoneLinkedTaskIds([]);
@@ -861,8 +861,8 @@ function getNextMilestoneId() {
     }
 
     const nextTaskId =
-      !projectState.tasks.length > 0
-        ? Math.max(...!projectState.tasks.map((task) => task.id)) + 1
+      projectState.tasks.length > 0
+        ? Math.max(...projectState.tasks.map((task) => task.id)) + 1
         : 1;
 
     const createdTask: TaskItem = {
@@ -881,9 +881,9 @@ function getNextMilestoneId() {
     };
 
     setProjectState({
-      ...!projectState,
-      tasks: [createdTask, ...!projectState.tasks],
-      activity: [createdActivity, ...!projectState.activity],
+      ...projectState,
+      tasks: [createdTask, ...projectState.tasks],
+      activity: [createdActivity, ...projectState.activity],
     });
 
     closeAddTaskModal();
@@ -912,10 +912,10 @@ function getNextMilestoneId() {
       return;
     }
 
-    const oldTask = !projectState.tasks.find((task) => task.id === editingTaskId);
+    const oldTask = projectState.tasks.find((task) => task.id === editingTaskId);
     if (!oldTask) return;
 
-    const updatedTasks = !projectState.tasks.map((task) =>
+    const updatedTasks = projectState.tasks.map((task) =>
       task.id === editingTaskId
         ? {
             ...task,
@@ -935,9 +935,9 @@ function getNextMilestoneId() {
     };
 
     setProjectState({
-      ...!projectState,
+      ...projectState,
       tasks: updatedTasks,
-      activity: [editActivity, ...!projectState.activity],
+      activity: [editActivity, ...projectState.activity],
     });
 
     if (selectedTask?.id === editingTaskId) {
@@ -955,12 +955,12 @@ function getNextMilestoneId() {
   }
 
   function handleDeleteTask(taskId: number) {
-    const taskToDeleteNow = !projectState.tasks.find((task) => task.id === taskId);
+    const taskToDeleteNow = projectState.tasks.find((task) => task.id === taskId);
     if (!taskToDeleteNow) return;
 
-    const updatedTasks = !projectState.tasks.filter((task) => task.id !== taskId);
+    const updatedTasks = projectState.tasks.filter((task) => task.id !== taskId);
 
-    const updatedMilestones = !projectState.milestones.map((milestone) => ({
+    const updatedMilestones = projectState.milestones.map((milestone) => ({
       ...milestone,
       linkedTaskIds: milestone.linkedTaskIds.filter((id) => id !== taskId),
     }));
@@ -972,10 +972,10 @@ function getNextMilestoneId() {
     };
 
     setProjectState({
-      ...!projectState,
+      ...projectState,
       tasks: updatedTasks,
       milestones: updatedMilestones,
-      activity: [deleteActivity, ...!projectState.activity],
+      activity: [deleteActivity, ...projectState.activity],
     });
 
     if (selectedTask?.id === taskId) {
@@ -986,7 +986,7 @@ function getNextMilestoneId() {
   }
 
   function handleStatusChange(taskId: number, nextStatus: TaskStatus) {
-    const currentTask = !projectState.tasks.find((task) => task.id === taskId);
+    const currentTask = projectState.tasks.find((task) => task.id === taskId);
 
     if (!currentTask || currentTask.status === nextStatus) {
       return;
@@ -1003,9 +1003,9 @@ function getNextMilestoneId() {
     };
 
     setProjectState({
-      ...!projectState,
+      ...projectState,
       tasks: updatedTasks,
-      activity: [statusActivity, ...!projectState.activity],
+      activity: [statusActivity, ...projectState.activity],
     });
 
     if (selectedTask?.id === taskId) {
@@ -1016,7 +1016,7 @@ function getNextMilestoneId() {
   function handleDragStart(event: DragStartEvent) {
     const taskId = Number(event.active.id);
     const foundTask =
-      !projectState.tasks.find((task) => task.id === taskId) || null;
+      projectState.tasks.find((task) => task.id === taskId) || null;
     setActiveDragTask(foundTask);
   }
 
@@ -1032,7 +1032,7 @@ function getNextMilestoneId() {
     if (!over) return;
 
     const activeTaskId = Number(active.id);
-    const draggedTask = !projectState.tasks.find((task) => task.id === activeTaskId);
+    const draggedTask = projectState.tasks.find((task) => task.id === activeTaskId);
 
     if (!draggedTask) return;
 
@@ -1041,7 +1041,7 @@ function getNextMilestoneId() {
     if (TASK_STATUSES.includes(over.id as TaskStatus)) {
       nextStatus = over.id as TaskStatus;
     } else {
-      const overTask = !projectState.tasks.find((task) => task.id === Number(over.id));
+      const overTask = projectState.tasks.find((task) => task.id === Number(over.id));
       nextStatus = overTask?.status || null;
     }
 
@@ -1069,8 +1069,8 @@ function getNextMilestoneId() {
     };
 
     setProjectState({
-      ...!projectState,
-      activity: [updateActivity, ...!projectState.activity],
+      ...projectState,
+      activity: [updateActivity, ...projectState.activity],
     });
 
     closePostUpdateModal();
@@ -1120,9 +1120,9 @@ function getNextMilestoneId() {
     };
 
     setProjectState({
-      ...!projectState,
-      milestones: [createdMilestone, ...!projectState.milestones],
-      activity: [milestoneActivity, ...!projectState.activity],
+      ...projectState,
+      milestones: [createdMilestone, ...projectState.milestones],
+      activity: [milestoneActivity, ...projectState.activity],
     });
 
     closeAddMilestoneModal();
@@ -1157,13 +1157,13 @@ function getNextMilestoneId() {
       return;
     }
 
-    const oldMilestone = !projectState.milestones.find(
+    const oldMilestone = projectState.milestones.find(
       (milestone) => milestone.id === editingMilestoneId,
     );
 
     if (!oldMilestone) return;
 
-    const updatedMilestones = !projectState.milestones.map((milestone) =>
+    const updatedMilestones = projectState.milestones.map((milestone) =>
       milestone.id === editingMilestoneId
         ? {
             ...milestone,
@@ -1184,22 +1184,22 @@ function getNextMilestoneId() {
     };
 
     setProjectState({
-      ...!projectState,
+      ...projectState,
       milestones: updatedMilestones,
-      activity: [editActivity, ...!projectState.activity],
+      activity: [editActivity, ...projectState.activity],
     });
 
     closeEditMilestoneModal();
   }
 
   function handleDeleteMilestone(milestoneId: number) {
-    const deletingMilestone = !projectState.milestones.find(
+    const deletingMilestone = projectState.milestones.find(
       (milestone) => milestone.id === milestoneId,
     );
 
     if (!deletingMilestone) return;
 
-    const updatedMilestones = !projectState.milestones.filter(
+    const updatedMilestones = projectState.milestones.filter(
       (milestone) => milestone.id !== milestoneId,
     );
 
@@ -1210,9 +1210,9 @@ function getNextMilestoneId() {
     };
 
     setProjectState({
-      ...!projectState,
+      ...projectState,
       milestones: updatedMilestones,
-      activity: [deleteActivity, ...!projectState.activity],
+      activity: [deleteActivity, ...projectState.activity],
     });
 
     closeDeleteMilestoneModal();
