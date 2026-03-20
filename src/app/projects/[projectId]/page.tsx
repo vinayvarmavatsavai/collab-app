@@ -94,61 +94,61 @@ const WORKSPACE_TABS: WorkspaceTab[] = [
 
 function getPriorityClasses(priority: TaskPriority) {
   if (priority === "High") {
-    return "border border-red-200 bg-red-100 text-red-700";
+    return "border border-[var(--danger-soft-border)] bg-[var(--danger-soft-bg)] text-[var(--danger-soft-text)]";
   }
   if (priority === "Medium") {
-    return "border border-amber-200 bg-amber-100 text-amber-700";
+    return "border border-[var(--line-soft)] bg-[var(--muted)] text-[var(--text-main)]";
   }
-  return "border border-emerald-200 bg-emerald-100 text-emerald-700";
+  return "border border-[var(--line-soft)] bg-[var(--surface-solid)] text-[var(--text-muted-2)]";
 }
 
 function getMilestonePriorityClasses(priority: MilestonePriority) {
   if (priority === "Critical") {
-    return "border border-red-200 bg-red-100 text-red-700";
+    return "border border-[var(--danger-soft-border)] bg-[var(--danger-soft-bg)] text-[var(--danger-soft-text)]";
   }
   if (priority === "High") {
-    return "border border-orange-200 bg-orange-100 text-orange-700";
+    return "border border-[var(--line-soft)] bg-[var(--muted)] text-[var(--text-main)]";
   }
   if (priority === "Medium") {
-    return "border border-amber-200 bg-amber-100 text-amber-700";
+    return "border border-[var(--line-soft)] bg-[var(--surface-solid)] text-[var(--text-main)]";
   }
-  return "border border-emerald-200 bg-emerald-100 text-emerald-700";
+  return "border border-[var(--line-soft)] bg-[var(--surface-solid)] text-[var(--text-muted-2)]";
 }
 
 function getMilestoneStatusClasses(status: MilestoneStatus) {
   if (status === "Completed") {
-    return "border border-emerald-200 bg-emerald-100 text-emerald-700";
+    return "border border-[var(--line-soft)] bg-[var(--surface-solid)] text-[var(--text-main)]";
   }
   if (status === "In Progress") {
-    return "border border-blue-200 bg-blue-100 text-blue-700";
+    return "border border-[var(--line-soft)] bg-[var(--muted)] text-[var(--text-main)]";
   }
-  return "border border-slate-200 bg-slate-100 text-slate-700";
+  return "border border-[var(--line-soft)] bg-[var(--surface-solid)] text-[var(--text-muted-2)]";
 }
 
 function getMilestoneHealthClasses(health: MilestoneHealth) {
   if (health === "Blocked") {
-    return "border border-red-200 bg-red-100 text-red-700";
+    return "border border-[var(--danger-soft-border)] bg-[var(--danger-soft-bg)] text-[var(--danger-soft-text)]";
   }
   if (health === "At Risk") {
-    return "border border-amber-200 bg-amber-100 text-amber-700";
+    return "border border-[var(--line-soft)] bg-[var(--muted)] text-[var(--text-main)]";
   }
-  return "border border-emerald-200 bg-emerald-100 text-emerald-700";
+  return "border border-[var(--line-soft)] bg-[var(--surface-solid)] text-[var(--text-main)]";
 }
 
 function getStatusClasses(status: TaskStatus) {
   if (status === "Done") {
-    return "border border-emerald-200 bg-emerald-100 text-emerald-700";
+    return "border border-[var(--line-soft)] bg-[var(--surface-solid)] text-[var(--text-main)]";
   }
   if (status === "In Progress") {
-    return "border border-blue-200 bg-blue-100 text-blue-700";
+    return "border border-[var(--line-soft)] bg-[var(--muted)] text-[var(--text-main)]";
   }
   if (status === "Review") {
-    return "border border-violet-200 bg-violet-100 text-violet-700";
+    return "border border-[var(--line-soft)] bg-[var(--muted)] text-[var(--text-main)]";
   }
   if (status === "Todo") {
-    return "border border-amber-200 bg-amber-100 text-amber-700";
+    return "border border-[var(--line-soft)] bg-[var(--surface-solid)] text-[var(--text-main)]";
   }
-  return "border border-slate-200 bg-slate-100 text-slate-700";
+  return "border border-[var(--line-soft)] bg-[var(--surface-solid)] text-[var(--text-muted-2)]";
 }
 
 function formatTimeNow() {
@@ -178,15 +178,15 @@ function getDueDateState(dueDate: string) {
 
 function getDueDateBadgeClasses(state: string) {
   if (state === "overdue") {
-    return "border border-red-200 bg-red-100 text-red-700";
+    return "border border-[var(--danger-soft-border)] bg-[var(--danger-soft-bg)] text-[var(--danger-soft-text)]";
   }
   if (state === "today") {
-    return "border border-amber-200 bg-amber-100 text-amber-700";
+    return "border border-[var(--line-soft)] bg-[var(--muted)] text-[var(--text-main)]";
   }
   if (state === "upcoming") {
-    return "border border-blue-200 bg-blue-100 text-blue-700";
+    return "border border-[var(--line-soft)] bg-[var(--surface-solid)] text-[var(--text-main)]";
   }
-  return "border border-slate-200 bg-slate-100 text-slate-700";
+  return "border border-[var(--line-soft)] bg-[var(--surface-solid)] text-[var(--text-muted-2)]";
 }
 
 function getDueDateLabel(dueDate: string) {
@@ -230,7 +230,8 @@ function calculateMilestoneHealth(
   if (progress === 100) return "On Track";
 
   const hasBlockedPattern = linkedTasks.some(
-    (task) => getDueDateState(task.dueDate) === "overdue" && task.status !== "Done",
+    (task) =>
+      getDueDateState(task.dueDate) === "overdue" && task.status !== "Done",
   );
 
   if (hasBlockedPattern) return "Blocked";
@@ -257,15 +258,15 @@ function TaskCardContent({
   onDeleteTask: (task: TaskItem) => void;
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-3 text-sm shadow-sm">
+    <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-3 text-sm shadow-sm">
       <button
         onClick={() => onOpenTask(task)}
-        className="text-left font-medium text-slate-800 transition hover:text-violet-700"
+        className="text-left font-medium text-[var(--text-main)] transition hover:text-[var(--primary)]"
       >
         {task.title}
       </button>
 
-      <p className="mt-1 text-xs text-slate-500">{task.assignee}</p>
+      <p className="mt-1 text-xs text-[var(--text-muted-2)]">{task.assignee}</p>
 
       <div className="mt-2">
         <span
@@ -297,7 +298,7 @@ function TaskCardContent({
       <div className="mt-3 flex flex-wrap gap-2">
         <button
           onClick={() => onEditTask(task)}
-          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 transition hover:bg-slate-100"
+          className="inline-flex items-center gap-1 rounded-xl border border-[var(--line-soft)] bg-[var(--muted)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-main)] transition hover:opacity-80"
         >
           <Pencil size={11} />
           Edit
@@ -305,7 +306,7 @@ function TaskCardContent({
 
         <button
           onClick={() => onDeleteTask(task)}
-          className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-medium text-red-700 transition hover:bg-red-100"
+          className="inline-flex items-center gap-1 rounded-xl border border-[var(--danger-soft-border)] bg-[var(--danger-soft-bg)] px-2.5 py-1 text-[11px] font-medium text-[var(--danger-soft-text)] transition hover:opacity-80"
         >
           <Trash2 size={11} />
           Delete
@@ -375,14 +376,15 @@ function BoardColumn({
 
   return (
     <div
-      className={`flex h-[72vh] w-[290px] shrink-0 flex-col rounded-2xl border bg-slate-50 transition ${isOver
-          ? "border-violet-300 ring-2 ring-violet-100"
-          : "border-slate-200"
-        }`}
+      className={`flex h-[72vh] w-[290px] shrink-0 flex-col rounded-3xl border bg-[var(--muted)] transition ${
+        isOver
+          ? "border-[var(--primary)] ring-2 ring-[var(--line-soft)]"
+          : "border-[var(--line-soft)]"
+      }`}
     >
-      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3">
-        <h3 className="font-semibold text-slate-800">{column.title}</h3>
-        <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-700">
+      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[var(--line-soft)] bg-[var(--muted)] px-4 py-3">
+        <h3 className="font-semibold text-[var(--text-main)]">{column.title}</h3>
+        <span className="rounded-full bg-[var(--surface-solid)] px-2 py-0.5 text-xs font-semibold text-[var(--text-main)]">
           {column.count}
         </span>
       </div>
@@ -394,10 +396,11 @@ function BoardColumn({
         >
           {column.tasks.length === 0 ? (
             <div
-              className={`rounded-xl border border-dashed bg-white p-4 text-center text-sm transition ${isOver
-                  ? "border-violet-300 text-violet-700"
-                  : "border-slate-200 text-slate-500"
-                }`}
+              className={`rounded-2xl border border-dashed bg-[var(--surface-solid)] p-4 text-center text-sm transition ${
+                isOver
+                  ? "border-[var(--primary)] text-[var(--text-main)]"
+                  : "border-[var(--line-soft)] text-[var(--text-muted-2)]"
+              }`}
             >
               Drop task here
             </div>
@@ -434,6 +437,17 @@ export default function ProjectWorkspacePage() {
   const [projectState, setProjectState] = useState<ProjectItem | null>(
     initialProject,
   );
+
+  useEffect(() => {
+    const localProjects = getStoredProjects();
+    const refreshedProject =
+      localProjects.find((item) => item.id === projectId) ||
+      projects.find((item) => item.id === projectId) ||
+      null;
+
+    setProjectState(refreshedProject);
+  }, [projectId]);
+
   useEffect(() => {
     if (!projectState) return;
 
@@ -442,7 +456,7 @@ export default function ProjectWorkspacePage() {
 
     if (existsInLocal) {
       const next = localProjects.map((item) =>
-        item.id === projectState.id ? (projectState as any) : item,
+        item.id === projectState.id ? ({ ...projectState } as ProjectItem) : item,
       );
       saveStoredProjects(next);
     }
@@ -529,8 +543,8 @@ export default function ProjectWorkspacePage() {
 
   if (!projectId) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-900">
-        <div className="rounded-2xl border border-slate-200 bg-white px-6 py-4 shadow-sm">
+      <main className="flex min-h-screen items-center justify-center bg-[var(--app-bg)] text-[var(--text-main)]">
+        <div className="rounded-3xl border border-[var(--line-soft)] bg-[var(--surface-solid)] px-6 py-4 shadow-sm">
           Loading project workspace...
         </div>
       </main>
@@ -539,16 +553,16 @@ export default function ProjectWorkspacePage() {
 
   if (!projectState) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 text-slate-900">
-        <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+      <main className="flex min-h-screen flex-col items-center justify-center bg-[var(--app-bg)] px-4 text-[var(--text-main)]">
+        <div className="rounded-3xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-8 text-center shadow-sm">
           <h1 className="text-2xl font-bold">Project not found</h1>
-          <p className="mt-2 text-slate-600">
+          <p className="mt-2 text-[var(--text-muted-2)]">
             No project matched this id:{" "}
             <span className="font-semibold">{projectId}</span>
           </p>
           <Link
             href="/projects"
-            className="mt-5 inline-flex rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+            className="mt-5 inline-flex rounded-2xl bg-[var(--primary-btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--primary-btn-text)] transition hover:opacity-90"
           >
             Go to Projects
           </Link>
@@ -662,20 +676,20 @@ export default function ProjectWorkspacePage() {
   ];
 
   function getNextActivityId() {
-    return projectState!.activity.length > 0
-      ? Math.max(...projectState!.activity.map((item) => item.id)) + 1
+    return !projectState.activity.length > 0
+      ? Math.max(...!projectState.activity.map((item) => item.id)) + 1
       : 1;
   }
 
   function getNextMilestoneId() {
-    return projectState!.milestones.length > 0
-      ? Math.max(...projectState!.milestones.map((item) => item.id)) + 1
+    return !projectState.milestones.length > 0
+      ? Math.max(...!projectState.milestones.map((item) => item.id)) + 1
       : 1;
   }
 
   function resetTaskForm() {
     setNewTaskTitle("");
-    setNewTaskAssignee(projectState!.team[0]?.name || "");
+    setNewTaskAssignee(!projectState.team[0]?.name || "");
     setNewTaskPriority("Medium");
     setNewTaskStatus("Todo");
     setNewTaskDueDate("");
@@ -685,7 +699,7 @@ export default function ProjectWorkspacePage() {
   function openAddTaskModal() {
     setIsAddTaskOpen(true);
     setNewTaskTitle("");
-    setNewTaskAssignee(projectState!.team[0]?.name || "");
+    setNewTaskAssignee(!projectState.team[0]?.name || "");
     setNewTaskPriority("Medium");
     setNewTaskStatus("Todo");
     setNewTaskDueDate("");
@@ -754,7 +768,7 @@ export default function ProjectWorkspacePage() {
   function resetMilestoneForm() {
     setMilestoneTitle("");
     setMilestoneDescription("");
-    setMilestoneOwner(projectState!.team[0]?.name || "");
+    setMilestoneOwner(!projectState.team[0]?.name || "");
     setMilestonePriority("Medium");
     setMilestoneDueDate("");
     setMilestoneLinkedTaskIds([]);
@@ -765,7 +779,7 @@ export default function ProjectWorkspacePage() {
     setIsAddMilestoneOpen(true);
     setMilestoneTitle("");
     setMilestoneDescription("");
-    setMilestoneOwner(projectState!.team[0]?.name || "");
+    setMilestoneOwner(!projectState.team[0]?.name || "");
     setMilestonePriority("Medium");
     setMilestoneDueDate("");
     setMilestoneLinkedTaskIds([]);
@@ -849,8 +863,8 @@ export default function ProjectWorkspacePage() {
     }
 
     const nextTaskId =
-      projectState!.tasks.length > 0
-        ? Math.max(...projectState!.tasks.map((task) => task.id)) + 1
+      !projectState.tasks.length > 0
+        ? Math.max(...!projectState.tasks.map((task) => task.id)) + 1
         : 1;
 
     const createdTask: TaskItem = {
@@ -869,9 +883,9 @@ export default function ProjectWorkspacePage() {
     };
 
     setProjectState({
-      ...projectState!,
-      tasks: [createdTask, ...projectState!.tasks],
-      activity: [createdActivity, ...projectState!.activity],
+      ...!projectState,
+      tasks: [createdTask, ...!projectState.tasks],
+      activity: [createdActivity, ...!projectState.activity],
     });
 
     closeAddTaskModal();
@@ -900,19 +914,19 @@ export default function ProjectWorkspacePage() {
       return;
     }
 
-    const oldTask = projectState!.tasks.find((task) => task.id === editingTaskId);
+    const oldTask = !projectState.tasks.find((task) => task.id === editingTaskId);
     if (!oldTask) return;
 
-    const updatedTasks = projectState!.tasks.map((task) =>
+    const updatedTasks = !projectState.tasks.map((task) =>
       task.id === editingTaskId
         ? {
-          ...task,
-          title: trimmedTitle,
-          assignee: trimmedAssignee,
-          priority: editTaskPriority,
-          status: editTaskStatus,
-          dueDate: editTaskDueDate,
-        }
+            ...task,
+            title: trimmedTitle,
+            assignee: trimmedAssignee,
+            priority: editTaskPriority,
+            status: editTaskStatus,
+            dueDate: editTaskDueDate,
+          }
         : task,
     );
 
@@ -923,9 +937,9 @@ export default function ProjectWorkspacePage() {
     };
 
     setProjectState({
-      ...projectState!,
+      ...!projectState,
       tasks: updatedTasks,
-      activity: [editActivity, ...projectState!.activity],
+      activity: [editActivity, ...!projectState.activity],
     });
 
     if (selectedTask?.id === editingTaskId) {
@@ -943,12 +957,12 @@ export default function ProjectWorkspacePage() {
   }
 
   function handleDeleteTask(taskId: number) {
-    const taskToDeleteNow = projectState!.tasks.find((task) => task.id === taskId);
+    const taskToDeleteNow = !projectState.tasks.find((task) => task.id === taskId);
     if (!taskToDeleteNow) return;
 
-    const updatedTasks = projectState!.tasks.filter((task) => task.id !== taskId);
+    const updatedTasks = !projectState.tasks.filter((task) => task.id !== taskId);
 
-    const updatedMilestones = projectState!.milestones.map((milestone) => ({
+    const updatedMilestones = !projectState.milestones.map((milestone) => ({
       ...milestone,
       linkedTaskIds: milestone.linkedTaskIds.filter((id) => id !== taskId),
     }));
@@ -960,10 +974,10 @@ export default function ProjectWorkspacePage() {
     };
 
     setProjectState({
-      ...projectState!,
+      ...!projectState,
       tasks: updatedTasks,
       milestones: updatedMilestones,
-      activity: [deleteActivity, ...projectState!.activity],
+      activity: [deleteActivity, ...!projectState.activity],
     });
 
     if (selectedTask?.id === taskId) {
@@ -974,13 +988,13 @@ export default function ProjectWorkspacePage() {
   }
 
   function handleStatusChange(taskId: number, nextStatus: TaskStatus) {
-    const currentTask = projectState!.tasks.find((task) => task.id === taskId);
+    const currentTask = !projectState.tasks.find((task) => task.id === taskId);
 
     if (!currentTask || currentTask.status === nextStatus) {
       return;
     }
 
-    const updatedTasks = projectState!.tasks.map((task) =>
+    const updatedTasks = projectState.tasks.map((task) =>
       task.id === taskId ? { ...task, status: nextStatus } : task,
     );
 
@@ -991,9 +1005,9 @@ export default function ProjectWorkspacePage() {
     };
 
     setProjectState({
-      ...projectState!,
+      ...!projectState,
       tasks: updatedTasks,
-      activity: [statusActivity, ...projectState!.activity],
+      activity: [statusActivity, ...!projectState.activity],
     });
 
     if (selectedTask?.id === taskId) {
@@ -1003,7 +1017,8 @@ export default function ProjectWorkspacePage() {
 
   function handleDragStart(event: DragStartEvent) {
     const taskId = Number(event.active.id);
-    const foundTask = projectState!.tasks.find((task) => task.id === taskId) || null;
+    const foundTask =
+      !projectState.tasks.find((task) => task.id === taskId) || null;
     setActiveDragTask(foundTask);
   }
 
@@ -1019,7 +1034,7 @@ export default function ProjectWorkspacePage() {
     if (!over) return;
 
     const activeTaskId = Number(active.id);
-    const draggedTask = projectState!.tasks.find((task) => task.id === activeTaskId);
+    const draggedTask = !projectState.tasks.find((task) => task.id === activeTaskId);
 
     if (!draggedTask) return;
 
@@ -1028,7 +1043,7 @@ export default function ProjectWorkspacePage() {
     if (TASK_STATUSES.includes(over.id as TaskStatus)) {
       nextStatus = over.id as TaskStatus;
     } else {
-      const overTask = projectState!.tasks.find((task) => task.id === Number(over.id));
+      const overTask = !projectState.tasks.find((task) => task.id === Number(over.id));
       nextStatus = overTask?.status || null;
     }
 
@@ -1056,8 +1071,8 @@ export default function ProjectWorkspacePage() {
     };
 
     setProjectState({
-      ...projectState!,
-      activity: [updateActivity, ...projectState!.activity],
+      ...!projectState,
+      activity: [updateActivity, ...!projectState.activity],
     });
 
     closePostUpdateModal();
@@ -1107,9 +1122,9 @@ export default function ProjectWorkspacePage() {
     };
 
     setProjectState({
-      ...projectState!,
-      milestones: [createdMilestone, ...projectState!.milestones],
-      activity: [milestoneActivity, ...projectState!.activity],
+      ...!projectState,
+      milestones: [createdMilestone, ...!projectState.milestones],
+      activity: [milestoneActivity, ...!projectState.activity],
     });
 
     closeAddMilestoneModal();
@@ -1144,23 +1159,23 @@ export default function ProjectWorkspacePage() {
       return;
     }
 
-    const oldMilestone = projectState!.milestones.find(
+    const oldMilestone = !projectState.milestones.find(
       (milestone) => milestone.id === editingMilestoneId,
     );
 
     if (!oldMilestone) return;
 
-    const updatedMilestones = projectState!.milestones.map((milestone) =>
+    const updatedMilestones = !projectState.milestones.map((milestone) =>
       milestone.id === editingMilestoneId
         ? {
-          ...milestone,
-          title: trimmedTitle,
-          description: trimmedDescription,
-          dueDate: editMilestoneDueDate,
-          owner: trimmedOwner,
-          priority: editMilestonePriority,
-          linkedTaskIds: editMilestoneLinkedTaskIds,
-        }
+            ...milestone,
+            title: trimmedTitle,
+            description: trimmedDescription,
+            dueDate: editMilestoneDueDate,
+            owner: trimmedOwner,
+            priority: editMilestonePriority,
+            linkedTaskIds: editMilestoneLinkedTaskIds,
+          }
         : milestone,
     );
 
@@ -1171,22 +1186,22 @@ export default function ProjectWorkspacePage() {
     };
 
     setProjectState({
-      ...projectState!,
+      ...!projectState,
       milestones: updatedMilestones,
-      activity: [editActivity, ...projectState!.activity],
+      activity: [editActivity, ...!projectState.activity],
     });
 
     closeEditMilestoneModal();
   }
 
   function handleDeleteMilestone(milestoneId: number) {
-    const deletingMilestone = projectState!.milestones.find(
+    const deletingMilestone = !projectState.milestones.find(
       (milestone) => milestone.id === milestoneId,
     );
 
     if (!deletingMilestone) return;
 
-    const updatedMilestones = projectState!.milestones.filter(
+    const updatedMilestones = !projectState.milestones.filter(
       (milestone) => milestone.id !== milestoneId,
     );
 
@@ -1197,9 +1212,9 @@ export default function ProjectWorkspacePage() {
     };
 
     setProjectState({
-      ...projectState!,
+      ...!projectState,
       milestones: updatedMilestones,
-      activity: [deleteActivity, ...projectState!.activity],
+      activity: [deleteActivity, ...!projectState.activity],
     });
 
     closeDeleteMilestoneModal();
@@ -1213,61 +1228,62 @@ export default function ProjectWorkspacePage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900">
+    <main className="min-h-screen bg-[var(--app-bg)] text-[var(--text-main)]">
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <div className="mb-6 flex items-center gap-3">
           <Link
             href="/home"
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-100"
+            className="inline-flex items-center gap-2 rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] px-4 py-2 text-sm font-medium text-[var(--text-main)] shadow-sm transition hover:opacity-90"
           >
             <ArrowLeft size={16} />
             Back to Home
           </Link>
         </div>
 
-        <section className="mb-6 rounded-3xl bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 p-6 text-white shadow-xl">
+        <section className="mb-6 rounded-[28px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-6 shadow-sm">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-3xl">
-              <p className="mb-2 inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold tracking-wide backdrop-blur">
+              <p className="mb-2 inline-flex rounded-full border border-[var(--line-soft)] bg-[var(--muted)] px-3 py-1 text-xs font-semibold tracking-wide text-[var(--text-main)]">
                 {projectState.category}
               </p>
 
-              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              <h1 className="text-3xl font-bold tracking-tight text-[var(--text-main)] sm:text-4xl">
                 {projectState.title}
               </h1>
 
-              <p className="mt-2 text-base text-white/90 sm:text-lg">
+              <p className="mt-2 text-base text-[var(--text-muted-2)] sm:text-lg">
                 {projectState.tagline}
               </p>
 
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-white/85 sm:text-base">
+              <p className="mt-4 max-w-2xl text-sm leading-6 text-[var(--text-muted-2)] sm:text-base">
                 {projectState.description}
               </p>
 
               <div className="mt-5 flex flex-wrap gap-3">
                 <button
                   onClick={openAddTaskModal}
-                  className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-indigo-700 shadow transition hover:bg-slate-100"
+                  className="rounded-2xl bg-[var(--primary-btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--primary-btn-text)] transition hover:opacity-90"
                 >
                   Add Task
                 </button>
 
                 <button
                   onClick={() => setActiveTab("Scrum Board")}
-                  className="rounded-xl border border-white/30 bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
+                  className="rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)] px-4 py-2 text-sm font-semibold text-[var(--text-main)] transition hover:opacity-80"
                 >
                   Open Scrum Board
                 </button>
 
                 <button
-                  className="rounded-xl border border-white/30 bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
+                  className="rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)] px-4 py-2 text-sm font-semibold text-[var(--text-main)] transition hover:opacity-80"
                   onClick={openPostUpdateModal}
                 >
                   Post Update
                 </button>
+
                 <Link
                   href="/sharedspace"
-                  className="rounded-xl border border-white/30 bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
+                  className="rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)] px-4 py-2 text-sm font-semibold text-[var(--text-main)] transition hover:opacity-80"
                 >
                   Shared Space
                 </Link>
@@ -1275,42 +1291,44 @@ export default function ProjectWorkspacePage() {
             </div>
 
             <div className="grid w-full max-w-md grid-cols-2 gap-4">
-              <div className="rounded-2xl bg-white/12 p-4 backdrop-blur">
-                <p className="text-xs uppercase tracking-wide text-white/75">
+              <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)] p-4">
+                <p className="text-xs uppercase tracking-wide text-[var(--text-muted-2)]">
                   Progress
                 </p>
-                <p className="mt-2 text-2xl font-bold">{projectProgress}%</p>
-                <div className="mt-3 h-2 rounded-full bg-white/20">
+                <p className="mt-2 text-2xl font-bold text-[var(--text-main)]">
+                  {projectProgress}%
+                </p>
+                <div className="mt-3 h-2 rounded-full bg-[var(--line-soft)]">
                   <div
-                    className="h-2 rounded-full bg-white"
+                    className="h-2 rounded-full bg-[var(--text-main)]"
                     style={{ width: `${projectProgress}%` }}
                   />
                 </div>
               </div>
 
-              <div className="rounded-2xl bg-white/12 p-4 backdrop-blur">
-                <p className="text-xs uppercase tracking-wide text-white/75">
+              <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)] p-4">
+                <p className="text-xs uppercase tracking-wide text-[var(--text-muted-2)]">
                   Due Date
                 </p>
-                <p className="mt-2 text-lg font-semibold">
+                <p className="mt-2 text-lg font-semibold text-[var(--text-main)]">
                   {projectState.dueDate}
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-white/12 p-4 backdrop-blur">
-                <p className="text-xs uppercase tracking-wide text-white/75">
+              <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)] p-4">
+                <p className="text-xs uppercase tracking-wide text-[var(--text-muted-2)]">
                   Tasks
                 </p>
-                <p className="mt-2 text-2xl font-bold">
+                <p className="mt-2 text-2xl font-bold text-[var(--text-main)]">
                   {projectState.tasks.length}
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-white/12 p-4 backdrop-blur">
-                <p className="text-xs uppercase tracking-wide text-white/75">
+              <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)] p-4">
+                <p className="text-xs uppercase tracking-wide text-[var(--text-muted-2)]">
                   Team
                 </p>
-                <p className="mt-2 text-2xl font-bold">
+                <p className="mt-2 text-2xl font-bold text-[var(--text-main)]">
                   {projectState.team.length}
                 </p>
               </div>
@@ -1318,16 +1336,17 @@ export default function ProjectWorkspacePage() {
           </div>
         </section>
 
-        <section className="mb-6 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
+        <section className="mb-6 rounded-[28px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-3 shadow-sm">
           <div className="flex flex-wrap gap-2">
             {WORKSPACE_TABS.map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`rounded-2xl px-4 py-2 text-sm font-semibold transition ${activeTab === tab
-                    ? "bg-slate-900 text-white shadow-sm"
-                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                  }`}
+                className={`rounded-2xl px-4 py-2 text-sm font-semibold transition ${
+                  activeTab === tab
+                    ? "bg-[var(--text-main)] text-[var(--background)] shadow-sm"
+                    : "bg-[var(--muted)] text-[var(--text-main)] hover:opacity-80"
+                }`}
               >
                 {tab}
               </button>
@@ -1339,69 +1358,83 @@ export default function ProjectWorkspacePage() {
           <section className="grid grid-cols-1 gap-6 xl:grid-cols-3">
             <div className="space-y-6 xl:col-span-2">
               <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-5 shadow-sm">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-slate-500">Completed Tasks</p>
-                      <h3 className="mt-1 text-2xl font-bold">{doneCount}</h3>
+                      <p className="text-sm text-[var(--text-muted-2)]">
+                        Completed Tasks
+                      </p>
+                      <h3 className="mt-1 text-2xl font-bold text-[var(--text-main)]">
+                        {doneCount}
+                      </h3>
                     </div>
-                    <div className="rounded-xl bg-emerald-100 p-3 text-emerald-700">
+                    <div className="rounded-xl border border-[var(--line-soft)] bg-[var(--muted)] p-3 text-[var(--text-main)]">
                       <CheckCircle2 size={20} />
                     </div>
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-5 shadow-sm">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-slate-500">In Progress</p>
-                      <h3 className="mt-1 text-2xl font-bold">{progressCount}</h3>
+                      <p className="text-sm text-[var(--text-muted-2)]">
+                        In Progress
+                      </p>
+                      <h3 className="mt-1 text-2xl font-bold text-[var(--text-main)]">
+                        {progressCount}
+                      </h3>
                     </div>
-                    <div className="rounded-xl bg-blue-100 p-3 text-blue-700">
+                    <div className="rounded-xl border border-[var(--line-soft)] bg-[var(--muted)] p-3 text-[var(--text-main)]">
                       <Clock3 size={20} />
                     </div>
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-5 shadow-sm">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-slate-500">Milestones</p>
-                      <h3 className="mt-1 text-2xl font-bold">
+                      <p className="text-sm text-[var(--text-muted-2)]">
+                        Milestones
+                      </p>
+                      <h3 className="mt-1 text-2xl font-bold text-[var(--text-main)]">
                         {computedMilestones.length}
                       </h3>
                     </div>
-                    <div className="rounded-xl bg-violet-100 p-3 text-violet-700">
+                    <div className="rounded-xl border border-[var(--line-soft)] bg-[var(--muted)] p-3 text-[var(--text-main)]">
                       <Target size={20} />
                     </div>
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-5 shadow-sm">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-slate-500">Team Members</p>
-                      <h3 className="mt-1 text-2xl font-bold">
+                      <p className="text-sm text-[var(--text-muted-2)]">
+                        Team Members
+                      </p>
+                      <h3 className="mt-1 text-2xl font-bold text-[var(--text-main)]">
                         {projectState.team.length}
                       </h3>
                     </div>
-                    <div className="rounded-xl bg-amber-100 p-3 text-amber-700">
+                    <div className="rounded-xl border border-[var(--line-soft)] bg-[var(--muted)] p-3 text-[var(--text-main)]">
                       <Users size={20} />
                     </div>
                   </div>
                 </div>
               </section>
 
-              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="rounded-[28px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-5 shadow-sm">
                 <div className="mb-5 flex items-center justify-between">
                   <div>
-                    <h2 className="text-xl font-bold">Task Snapshot</h2>
-                    <p className="text-sm text-slate-500">
+                    <h2 className="text-xl font-bold text-[var(--text-main)]">
+                      Task Snapshot
+                    </h2>
+                    <p className="text-sm text-[var(--text-muted-2)]">
                       Quick view of latest work items
                     </p>
                   </div>
                   <button
-                    className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                    className="rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)] px-4 py-2 text-sm font-medium text-[var(--text-main)] transition hover:opacity-80"
                     onClick={() => setActiveTab("Tasks")}
                   >
                     Go to Tasks
@@ -1413,11 +1446,13 @@ export default function ProjectWorkspacePage() {
                     <button
                       key={task.id}
                       onClick={() => openTaskDetailModal(task)}
-                      className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-left transition hover:bg-slate-100"
+                      className="flex w-full items-center justify-between rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)] px-4 py-4 text-left transition hover:opacity-80"
                     >
                       <div>
-                        <p className="font-semibold text-slate-800">{task.title}</p>
-                        <p className="mt-1 text-sm text-slate-500">
+                        <p className="font-semibold text-[var(--text-main)]">
+                          {task.title}
+                        </p>
+                        <p className="mt-1 text-sm text-[var(--text-muted-2)]">
                           {task.assignee}
                         </p>
                       </div>
@@ -1443,19 +1478,26 @@ export default function ProjectWorkspacePage() {
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="rounded-[28px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-5 shadow-sm">
                 <div className="mb-4 flex items-center gap-2">
-                  <MessageSquare className="text-slate-700" size={18} />
-                  <h2 className="text-lg font-bold">Recent Activity</h2>
+                  <MessageSquare className="text-[var(--text-main)]" size={18} />
+                  <h2 className="text-lg font-bold text-[var(--text-main)]">
+                    Recent Activity
+                  </h2>
                 </div>
 
                 <div className="space-y-3">
                   {projectState.activity.slice(0, 6).map((item) => (
-                    <div key={item.id} className="rounded-2xl bg-slate-50 p-4">
-                      <p className="text-sm leading-6 text-slate-700">
+                    <div
+                      key={item.id}
+                      className="rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)] p-4"
+                    >
+                      <p className="text-sm leading-6 text-[var(--text-main)]">
                         {item.text}
                       </p>
-                      <p className="mt-2 text-xs text-slate-500">{item.time}</p>
+                      <p className="mt-2 text-xs text-[var(--text-muted-2)]">
+                        {item.time}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -1463,27 +1505,31 @@ export default function ProjectWorkspacePage() {
             </div>
 
             <aside className="space-y-6">
-              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="rounded-[28px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-5 shadow-sm">
                 <div className="mb-4 flex items-center gap-2">
-                  <Users className="text-slate-700" size={18} />
-                  <h2 className="text-lg font-bold">Team Members</h2>
+                  <Users className="text-[var(--text-main)]" size={18} />
+                  <h2 className="text-lg font-bold text-[var(--text-main)]">
+                    Team Members
+                  </h2>
                 </div>
 
                 <div className="space-y-3">
                   {projectState.team.map((member) => (
                     <div
                       key={member.id}
-                      className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3"
+                      className="flex items-center justify-between rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)] px-4 py-3"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-fuchsia-500 font-bold text-white">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--line-soft)] bg-[var(--surface-solid)] font-bold text-[var(--text-main)]">
                           {member.avatar}
                         </div>
                         <div>
-                          <p className="font-medium text-slate-800">
+                          <p className="font-medium text-[var(--text-main)]">
                             {member.name}
                           </p>
-                          <p className="text-sm text-slate-500">{member.role}</p>
+                          <p className="text-sm text-[var(--text-muted-2)]">
+                            {member.role}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -1491,23 +1537,25 @@ export default function ProjectWorkspacePage() {
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="rounded-[28px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-5 shadow-sm">
                 <div className="mb-4 flex items-center gap-2">
-                  <FolderKanban className="text-slate-700" size={18} />
-                  <h2 className="text-lg font-bold">Project Info</h2>
+                  <FolderKanban className="text-[var(--text-main)]" size={18} />
+                  <h2 className="text-lg font-bold text-[var(--text-main)]">
+                    Project Info
+                  </h2>
                 </div>
 
-                <div className="space-y-4 text-sm text-slate-600">
+                <div className="space-y-4 text-sm text-[var(--text-muted-2)]">
                   <div className="flex items-center gap-3">
-                    <CalendarDays size={16} className="text-slate-400" />
+                    <CalendarDays size={16} className="text-[var(--text-muted-2)]" />
                     <span>Deadline: {projectState.dueDate}</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <Users size={16} className="text-slate-400" />
+                    <Users size={16} className="text-[var(--text-muted-2)]" />
                     <span>Created by: {projectState.createdBy}</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <Target size={16} className="text-slate-400" />
+                    <Target size={16} className="text-[var(--text-muted-2)]" />
                     <span>Progress: {projectProgress}%</span>
                   </div>
                 </div>
@@ -1517,19 +1565,21 @@ export default function ProjectWorkspacePage() {
         )}
 
         {activeTab === "Tasks" && (
-          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <section className="rounded-[28px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-5 shadow-sm">
             <div className="mb-5 flex flex-col gap-4">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h2 className="text-xl font-bold">Task Tracker</h2>
-                  <p className="text-sm text-slate-500">
+                  <h2 className="text-xl font-bold text-[var(--text-main)]">
+                    Task Tracker
+                  </h2>
+                  <p className="text-sm text-[var(--text-muted-2)]">
                     Manage and update all project tasks
                   </p>
                 </div>
 
                 <button
                   onClick={openAddTaskModal}
-                  className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+                  className="rounded-2xl bg-[var(--primary-btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--primary-btn-text)] transition hover:opacity-90"
                 >
                   Add Task
                 </button>
@@ -1541,7 +1591,7 @@ export default function ProjectWorkspacePage() {
                   placeholder="Search tasks..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                  className="rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm text-[var(--text-main)] outline-none transition focus:border-[var(--field-focus)]"
                 />
 
                 <select
@@ -1549,7 +1599,7 @@ export default function ProjectWorkspacePage() {
                   onChange={(e) =>
                     setFilterStatus(e.target.value as TaskStatus | "All")
                   }
-                  className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                  className="rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm text-[var(--text-main)] outline-none transition focus:border-[var(--field-focus)]"
                 >
                   <option value="All">All Status</option>
                   {TASK_STATUSES.map((status) => (
@@ -1564,7 +1614,7 @@ export default function ProjectWorkspacePage() {
                   onChange={(e) =>
                     setFilterPriority(e.target.value as TaskPriority | "All")
                   }
-                  className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                  className="rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm text-[var(--text-main)] outline-none transition focus:border-[var(--field-focus)]"
                 >
                   <option value="All">All Priority</option>
                   <option value="Low">Low</option>
@@ -1575,7 +1625,7 @@ export default function ProjectWorkspacePage() {
                 <select
                   value={filterAssignee}
                   onChange={(e) => setFilterAssignee(e.target.value)}
-                  className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                  className="rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm text-[var(--text-main)] outline-none transition focus:border-[var(--field-focus)]"
                 >
                   <option value="All">All Assignees</option>
                   {projectState.team.map((member) => (
@@ -1587,13 +1637,13 @@ export default function ProjectWorkspacePage() {
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-[var(--text-muted-2)]">
                   Showing{" "}
-                  <span className="font-semibold text-slate-700">
+                  <span className="font-semibold text-[var(--text-main)]">
                     {filteredTasks.length}
                   </span>{" "}
                   of{" "}
-                  <span className="font-semibold text-slate-700">
+                  <span className="font-semibold text-[var(--text-main)]">
                     {projectState.tasks.length}
                   </span>{" "}
                   tasks
@@ -1601,7 +1651,7 @@ export default function ProjectWorkspacePage() {
 
                 <button
                   onClick={clearTaskFilters}
-                  className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                  className="rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)] px-3 py-2 text-sm font-medium text-[var(--text-main)] transition hover:opacity-80"
                 >
                   Clear Filters
                 </button>
@@ -1611,7 +1661,7 @@ export default function ProjectWorkspacePage() {
             <div className="overflow-x-auto">
               <table className="min-w-full border-separate border-spacing-y-3">
                 <thead>
-                  <tr className="text-left text-sm text-slate-500">
+                  <tr className="text-left text-sm text-[var(--text-muted-2)]">
                     <th className="px-3">Task</th>
                     <th className="px-3">Assignee</th>
                     <th className="px-3">Due Date</th>
@@ -1625,26 +1675,26 @@ export default function ProjectWorkspacePage() {
                     <tr>
                       <td
                         colSpan={6}
-                        className="rounded-2xl bg-slate-50 px-3 py-10 text-center text-sm text-slate-500"
+                        className="rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)] px-3 py-10 text-center text-sm text-[var(--text-muted-2)]"
                       >
                         No tasks match your filters.
                       </td>
                     </tr>
                   ) : (
                     filteredTasks.map((task) => (
-                      <tr key={task.id} className="bg-slate-50">
-                        <td className="rounded-l-2xl px-3 py-4 font-medium text-slate-800">
+                      <tr key={task.id} className="bg-[var(--muted)]">
+                        <td className="rounded-l-2xl border-y border-l border-[var(--line-soft)] px-3 py-4 font-medium text-[var(--text-main)]">
                           <button
                             onClick={() => openTaskDetailModal(task)}
-                            className="text-left transition hover:text-violet-700"
+                            className="text-left transition hover:text-[var(--primary)]"
                           >
                             {task.title}
                           </button>
                         </td>
-                        <td className="px-3 py-4 text-sm text-slate-600">
+                        <td className="border-y border-[var(--line-soft)] px-3 py-4 text-sm text-[var(--text-muted-2)]">
                           {task.assignee}
                         </td>
-                        <td className="px-3 py-4">
+                        <td className="border-y border-[var(--line-soft)] px-3 py-4">
                           <span
                             className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getDueDateBadgeClasses(
                               getDueDateState(task.dueDate),
@@ -1653,7 +1703,7 @@ export default function ProjectWorkspacePage() {
                             {getDueDateLabel(task.dueDate)}
                           </span>
                         </td>
-                        <td className="px-3 py-4">
+                        <td className="border-y border-[var(--line-soft)] px-3 py-4">
                           <span
                             className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getPriorityClasses(
                               task.priority,
@@ -1662,7 +1712,7 @@ export default function ProjectWorkspacePage() {
                             {task.priority}
                           </span>
                         </td>
-                        <td className="px-3 py-4">
+                        <td className="border-y border-[var(--line-soft)] px-3 py-4">
                           <span
                             className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(
                               task.status,
@@ -1671,11 +1721,11 @@ export default function ProjectWorkspacePage() {
                             {task.status}
                           </span>
                         </td>
-                        <td className="rounded-r-2xl px-3 py-4">
+                        <td className="rounded-r-2xl border-y border-r border-[var(--line-soft)] px-3 py-4">
                           <div className="flex flex-wrap gap-2">
                             <button
                               onClick={() => openEditTaskModal(task)}
-                              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+                              className="inline-flex items-center gap-1 rounded-xl border border-[var(--line-soft)] bg-[var(--surface-solid)] px-2.5 py-1 text-xs font-medium text-[var(--text-main)] transition hover:opacity-80"
                             >
                               <Pencil size={12} />
                               Edit
@@ -1683,7 +1733,7 @@ export default function ProjectWorkspacePage() {
 
                             <button
                               onClick={() => openDeleteConfirmModal(task)}
-                              className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 transition hover:bg-red-100"
+                              className="inline-flex items-center gap-1 rounded-xl border border-[var(--danger-soft-border)] bg-[var(--danger-soft-bg)] px-2.5 py-1 text-xs font-medium text-[var(--danger-soft-text)] transition hover:opacity-80"
                             >
                               <Trash2 size={12} />
                               Delete
@@ -1694,7 +1744,7 @@ export default function ProjectWorkspacePage() {
                                 <button
                                   key={status}
                                   onClick={() => handleStatusChange(task.id, status)}
-                                  className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+                                  className="rounded-xl border border-[var(--line-soft)] bg-[var(--surface-solid)] px-2.5 py-1 text-xs font-medium text-[var(--text-main)] transition hover:opacity-80"
                                 >
                                   {status}
                                 </button>
@@ -1712,20 +1762,23 @@ export default function ProjectWorkspacePage() {
         )}
 
         {activeTab === "Scrum Board" && (
-          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <section className="rounded-[28px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-5 shadow-sm">
             <div className="mb-5 flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-bold">Scrum Board</h2>
-                <p className="text-sm text-slate-500">
+                <h2 className="text-xl font-bold text-[var(--text-main)]">
+                  Scrum Board
+                </h2>
+                <p className="text-sm text-[var(--text-muted-2)]"
+                >
                   Drag tasks between columns like Jira, Trello, and Linear
                 </p>
               </div>
-              <div className="rounded-xl bg-slate-100 p-2 text-slate-700">
+              <div className="rounded-xl border border-[var(--line-soft)] bg-[var(--muted)] p-2 text-[var(--text-main)]">
                 <LayoutGrid size={18} />
               </div>
             </div>
 
-            <div className="mb-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            <div className="mb-4 rounded-2xl border border-dashed border-[var(--line-soft)] bg-[var(--muted)] px-4 py-3 text-sm text-[var(--text-muted-2)]">
               Drag and drop task cards between Backlog, Todo, In Progress, Review,
               and Done.
             </div>
@@ -1770,18 +1823,20 @@ export default function ProjectWorkspacePage() {
         {activeTab === "Updates" && (
           <section className="grid grid-cols-1 gap-6 xl:grid-cols-3">
             <div className="space-y-6 xl:col-span-2">
-              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="rounded-[28px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-5 shadow-sm">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <h2 className="text-xl font-bold">Project Updates</h2>
-                    <p className="text-sm text-slate-500">
+                    <h2 className="text-xl font-bold text-[var(--text-main)]">
+                      Project Updates
+                    </h2>
+                    <p className="text-sm text-[var(--text-muted-2)]">
                       Progress logs, blockers, team notes, and announcements
                     </p>
                   </div>
 
                   <button
                     onClick={openPostUpdateModal}
-                    className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+                    className="rounded-2xl bg-[var(--primary-btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--primary-btn-text)] transition hover:opacity-90"
                   >
                     Post Update
                   </button>
@@ -1789,20 +1844,20 @@ export default function ProjectWorkspacePage() {
               </div>
 
               {projectState.activity.length === 0 ? (
-                <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-10 text-center shadow-sm">
-                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+                <div className="rounded-[28px] border border-dashed border-[var(--line-soft)] bg-[var(--surface-solid)] p-10 text-center shadow-sm">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)] text-[var(--text-muted-2)]">
                     <MessageSquare size={24} />
                   </div>
-                  <h3 className="mt-4 text-lg font-bold text-slate-900">
+                  <h3 className="mt-4 text-lg font-bold text-[var(--text-main)]">
                     No updates yet
                   </h3>
-                  <p className="mt-2 text-sm text-slate-500">
+                  <p className="mt-2 text-sm text-[var(--text-muted-2)]">
                     Start the conversation by sharing progress, blockers, or
                     team announcements.
                   </p>
                   <button
                     onClick={openPostUpdateModal}
-                    className="mt-5 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+                    className="mt-5 rounded-2xl bg-[var(--primary-btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--primary-btn-text)] transition hover:opacity-90"
                   >
                     Post First Update
                   </button>
@@ -1812,10 +1867,10 @@ export default function ProjectWorkspacePage() {
                   {projectState.activity.map((item, index) => (
                     <div
                       key={item.id}
-                      className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"
+                      className="rounded-[28px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-5 shadow-sm"
                     >
                       <div className="flex items-start gap-4">
-                        <div className="mt-1 flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-700">
+                        <div className="mt-1 flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)] text-[var(--text-main)]">
                           {index % 3 === 0 ? (
                             <Sparkles size={18} />
                           ) : index % 3 === 1 ? (
@@ -1827,15 +1882,15 @@ export default function ProjectWorkspacePage() {
 
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="inline-flex rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                            <span className="inline-flex rounded-full border border-[var(--line-soft)] bg-[var(--muted)] px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted-2)]">
                               Project Update
                             </span>
-                            <span className="text-xs text-slate-400">
+                            <span className="text-xs text-[var(--text-muted-2)]">
                               {item.time}
                             </span>
                           </div>
 
-                          <p className="mt-3 text-sm leading-7 text-slate-700">
+                          <p className="mt-3 text-sm leading-7 text-[var(--text-main)]">
                             {item.text}
                           </p>
                         </div>
@@ -1847,40 +1902,44 @@ export default function ProjectWorkspacePage() {
             </div>
 
             <aside className="space-y-6">
-              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="rounded-[28px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-5 shadow-sm">
                 <div className="mb-4 flex items-center gap-2">
-                  <MessageSquare className="text-slate-700" size={18} />
-                  <h2 className="text-lg font-bold">Updates Summary</h2>
+                  <MessageSquare className="text-[var(--text-main)]" size={18} />
+                  <h2 className="text-lg font-bold text-[var(--text-main)]">
+                    Updates Summary
+                  </h2>
                 </div>
 
                 <div className="space-y-4">
-                  <div className="rounded-2xl bg-slate-50 p-4">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">
+                  <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)] p-4">
+                    <p className="text-xs uppercase tracking-wide text-[var(--text-muted-2)]">
                       Total Updates
                     </p>
-                    <p className="mt-2 text-2xl font-bold text-slate-900">
+                    <p className="mt-2 text-2xl font-bold text-[var(--text-main)]">
                       {projectState.activity.length}
                     </p>
                   </div>
 
-                  <div className="rounded-2xl bg-slate-50 p-4">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">
+                  <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)] p-4">
+                    <p className="text-xs uppercase tracking-wide text-[var(--text-muted-2)]">
                       Latest Activity
                     </p>
-                    <p className="mt-2 text-sm leading-6 text-slate-700">
+                    <p className="mt-2 text-sm leading-6 text-[var(--text-main)]">
                       {projectState.activity[0]?.text || "No activity yet"}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="rounded-[28px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-5 shadow-sm">
                 <div className="mb-4 flex items-center gap-2">
-                  <Sparkles className="text-slate-700" size={18} />
-                  <h2 className="text-lg font-bold">What to post here</h2>
+                  <Sparkles className="text-[var(--text-main)]" size={18} />
+                  <h2 className="text-lg font-bold text-[var(--text-main)]">
+                    What to post here
+                  </h2>
                 </div>
 
-                <div className="space-y-3 text-sm text-slate-600">
+                <div className="space-y-3 text-sm text-[var(--text-muted-2)]">
                   <p>• Completed UI or backend progress</p>
                   <p>• Blockers and dependency issues</p>
                   <p>• Testing notes and bug updates</p>
@@ -1895,80 +1954,88 @@ export default function ProjectWorkspacePage() {
         {activeTab === "Milestones" && (
           <section className="space-y-6">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-5 shadow-sm">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-slate-500">Completed</p>
-                    <h3 className="mt-1 text-2xl font-bold">
+                    <p className="text-sm text-[var(--text-muted-2)]">
+                      Completed
+                    </p>
+                    <h3 className="mt-1 text-2xl font-bold text-[var(--text-main)]">
                       {completedMilestones.length}
                     </h3>
                   </div>
-                  <div className="rounded-xl bg-emerald-100 p-3 text-emerald-700">
+                  <div className="rounded-xl border border-[var(--line-soft)] bg-[var(--muted)] p-3 text-[var(--text-main)]">
                     <CheckCircle2 size={20} />
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-5 shadow-sm">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-slate-500">In Progress</p>
-                    <h3 className="mt-1 text-2xl font-bold">
+                    <p className="text-sm text-[var(--text-muted-2)]">
+                      In Progress
+                    </p>
+                    <h3 className="mt-1 text-2xl font-bold text-[var(--text-main)]">
                       {inProgressMilestones.length}
                     </h3>
                   </div>
-                  <div className="rounded-xl bg-blue-100 p-3 text-blue-700">
+                  <div className="rounded-xl border border-[var(--line-soft)] bg-[var(--muted)] p-3 text-[var(--text-main)]">
                     <Clock3 size={20} />
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-5 shadow-sm">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-slate-500">Upcoming</p>
-                    <h3 className="mt-1 text-2xl font-bold">
+                    <p className="text-sm text-[var(--text-muted-2)]">
+                      Upcoming
+                    </p>
+                    <h3 className="mt-1 text-2xl font-bold text-[var(--text-main)]">
                       {upcomingMilestones.length}
                     </h3>
                   </div>
-                  <div className="rounded-xl bg-violet-100 p-3 text-violet-700">
+                  <div className="rounded-xl border border-[var(--line-soft)] bg-[var(--muted)] p-3 text-[var(--text-main)]">
                     <Target size={20} />
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="rounded-[28px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-5 shadow-sm">
               <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h2 className="text-xl font-bold">Milestones Roadmap</h2>
-                  <p className="text-sm text-slate-500">
+                  <h2 className="text-xl font-bold text-[var(--text-main)]">
+                    Milestones Roadmap
+                  </h2>
+                  <p className="text-sm text-[var(--text-muted-2)]">
                     Major goals linked to actual project tasks
                   </p>
                 </div>
 
                 <button
                   onClick={openAddMilestoneModal}
-                  className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+                  className="rounded-2xl bg-[var(--primary-btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--primary-btn-text)] transition hover:opacity-90"
                 >
                   Add Milestone
                 </button>
               </div>
 
               {computedMilestones.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center">
-                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-slate-500 shadow-sm">
+                <div className="rounded-2xl border border-dashed border-[var(--line-soft)] bg-[var(--muted)] p-10 text-center">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] text-[var(--text-muted-2)] shadow-sm">
                     <Target size={24} />
                   </div>
-                  <h3 className="mt-4 text-lg font-bold text-slate-900">
+                  <h3 className="mt-4 text-lg font-bold text-[var(--text-main)]">
                     No milestones added yet
                   </h3>
-                  <p className="mt-2 text-sm text-slate-500">
+                  <p className="mt-2 text-sm text-[var(--text-muted-2)]">
                     Add milestones later to track the major phases of this project.
                   </p>
                   <button
                     onClick={openAddMilestoneModal}
-                    className="mt-5 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+                    className="mt-5 rounded-2xl bg-[var(--primary-btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--primary-btn-text)] transition hover:opacity-90"
                   >
                     Create First Milestone
                   </button>
@@ -1978,30 +2045,30 @@ export default function ProjectWorkspacePage() {
                   {computedMilestones.map((milestone, index) => (
                     <div
                       key={milestone.id}
-                      className="rounded-3xl border border-slate-200 bg-slate-50 p-5"
+                      className="rounded-[28px] border border-[var(--line-soft)] bg-[var(--muted)] p-5"
                     >
                       <div className="flex flex-col gap-4">
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                           <div className="flex min-w-0 items-start gap-4">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-slate-700 shadow-sm">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] text-[var(--text-main)] shadow-sm">
                               <span className="text-sm font-bold">{index + 1}</span>
                             </div>
 
                             <div className="min-w-0">
-                              <p className="text-lg font-semibold text-slate-900">
+                              <p className="text-lg font-semibold text-[var(--text-main)]">
                                 {milestone.title}
                               </p>
-                              <p className="mt-2 text-sm leading-6 text-slate-600">
+                              <p className="mt-2 text-sm leading-6 text-[var(--text-muted-2)]">
                                 {milestone.description}
                               </p>
 
                               <div className="mt-3 flex flex-wrap items-center gap-2">
-                                <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">
+                                <span className="inline-flex items-center gap-1 rounded-full border border-[var(--line-soft)] bg-[var(--surface-solid)] px-3 py-1 text-xs font-medium text-[var(--text-main)]">
                                   <CalendarDays size={12} />
                                   Due: {milestone.dueDate}
                                 </span>
 
-                                <span className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">
+                                <span className="inline-flex rounded-full border border-[var(--line-soft)] bg-[var(--surface-solid)] px-3 py-1 text-xs font-medium text-[var(--text-main)]">
                                   Owner: {milestone.owner}
                                 </span>
 
@@ -2035,7 +2102,7 @@ export default function ProjectWorkspacePage() {
 
                             <button
                               onClick={() => openEditMilestoneModal(milestone)}
-                              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+                              className="inline-flex items-center gap-1 rounded-xl border border-[var(--line-soft)] bg-[var(--surface-solid)] px-2.5 py-1 text-xs font-medium text-[var(--text-main)] transition hover:opacity-80"
                             >
                               <Pencil size={12} />
                               Edit
@@ -2043,7 +2110,7 @@ export default function ProjectWorkspacePage() {
 
                             <button
                               onClick={() => openDeleteMilestoneModal(milestone)}
-                              className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 transition hover:bg-red-100"
+                              className="inline-flex items-center gap-1 rounded-xl border border-[var(--danger-soft-border)] bg-[var(--danger-soft-bg)] px-2.5 py-1 text-xs font-medium text-[var(--danger-soft-text)] transition hover:opacity-80"
                             >
                               <Trash2 size={12} />
                               Delete
@@ -2053,37 +2120,37 @@ export default function ProjectWorkspacePage() {
 
                         <div>
                           <div className="mb-2 flex items-center justify-between text-sm">
-                            <span className="font-medium text-slate-700">
+                            <span className="font-medium text-[var(--text-main)]">
                               Progress
                             </span>
-                            <span className="font-semibold text-slate-900">
+                            <span className="font-semibold text-[var(--text-main)]">
                               {milestone.progress}%
                             </span>
                           </div>
 
-                          <div className="h-2.5 rounded-full bg-slate-200">
+                          <div className="h-2.5 rounded-full bg-[var(--line-soft)]">
                             <div
-                              className="h-2.5 rounded-full bg-slate-900 transition-all"
+                              className="h-2.5 rounded-full bg-[var(--text-main)] transition-all"
                               style={{ width: `${milestone.progress}%` }}
                             />
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                          <div className="rounded-2xl bg-white p-4 shadow-sm">
-                            <p className="text-xs uppercase tracking-wide text-slate-500">
+                          <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 shadow-sm">
+                            <p className="text-xs uppercase tracking-wide text-[var(--text-muted-2)]">
                               Linked Tasks
                             </p>
-                            <p className="mt-2 text-xl font-bold text-slate-900">
+                            <p className="mt-2 text-xl font-bold text-[var(--text-main)]">
                               {milestone.linkedTasks.length}
                             </p>
                           </div>
 
-                          <div className="rounded-2xl bg-white p-4 shadow-sm">
-                            <p className="text-xs uppercase tracking-wide text-slate-500">
+                          <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 shadow-sm">
+                            <p className="text-xs uppercase tracking-wide text-[var(--text-muted-2)]">
                               Done Tasks
                             </p>
-                            <p className="mt-2 text-xl font-bold text-slate-900">
+                            <p className="mt-2 text-xl font-bold text-[var(--text-main)]">
                               {
                                 milestone.linkedTasks.filter(
                                   (task) => task.status === "Done",
@@ -2092,11 +2159,11 @@ export default function ProjectWorkspacePage() {
                             </p>
                           </div>
 
-                          <div className="rounded-2xl bg-white p-4 shadow-sm">
-                            <p className="text-xs uppercase tracking-wide text-slate-500">
+                          <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 shadow-sm">
+                            <p className="text-xs uppercase tracking-wide text-[var(--text-muted-2)]">
                               Remaining
                             </p>
-                            <p className="mt-2 text-xl font-bold text-slate-900">
+                            <p className="mt-2 text-xl font-bold text-[var(--text-main)]">
                               {
                                 milestone.linkedTasks.filter(
                                   (task) => task.status !== "Done",
@@ -2107,8 +2174,8 @@ export default function ProjectWorkspacePage() {
                         </div>
 
                         {milestone.linkedTasks.length > 0 ? (
-                          <div className="rounded-2xl bg-white p-4 shadow-sm">
-                            <p className="mb-3 text-sm font-semibold text-slate-800">
+                          <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 shadow-sm">
+                            <p className="mb-3 text-sm font-semibold text-[var(--text-main)]">
                               Linked Task Titles
                             </p>
 
@@ -2116,7 +2183,7 @@ export default function ProjectWorkspacePage() {
                               {milestone.linkedTasks.map((task) => (
                                 <span
                                   key={task.id}
-                                  className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700"
+                                  className="inline-flex rounded-full border border-[var(--line-soft)] bg-[var(--muted)] px-3 py-1 text-xs font-medium text-[var(--text-main)]"
                                 >
                                   {task.title}
                                 </span>
@@ -2124,7 +2191,7 @@ export default function ProjectWorkspacePage() {
                             </div>
                           </div>
                         ) : (
-                          <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-4 text-sm text-slate-500">
+                          <div className="rounded-2xl border border-dashed border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 text-sm text-[var(--text-muted-2)]">
                             No linked tasks yet for this milestone.
                           </div>
                         )}
@@ -2139,11 +2206,13 @@ export default function ProjectWorkspacePage() {
 
         {activeTab === "Team" && (
           <section className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-            <div className="xl:col-span-2 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="xl:col-span-2 rounded-[28px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-5 shadow-sm">
               <div className="mb-5 flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-bold">Team Members</h2>
-                  <p className="text-sm text-slate-500">
+                  <h2 className="text-xl font-bold text-[var(--text-main)]">
+                    Team Members
+                  </h2>
+                  <p className="text-sm text-[var(--text-muted-2)]">
                     Current collaborators in this workspace
                   </p>
                 </div>
@@ -2153,18 +2222,20 @@ export default function ProjectWorkspacePage() {
                 {projectState.team.map((member) => (
                   <div
                     key={member.id}
-                    className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                    className="rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)] p-4"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-fuchsia-500 font-bold text-white">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[var(--line-soft)] bg-[var(--surface-solid)] font-bold text-[var(--text-main)]">
                         {member.avatar}
                       </div>
 
                       <div>
-                        <p className="font-semibold text-slate-800">
+                        <p className="font-semibold text-[var(--text-main)]">
                           {member.name}
                         </p>
-                        <p className="text-sm text-slate-500">{member.role}</p>
+                        <p className="text-sm text-[var(--text-muted-2)]">
+                          {member.role}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -2172,13 +2243,15 @@ export default function ProjectWorkspacePage() {
               </div>
             </div>
 
-            <aside className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <aside className="rounded-[28px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-5 shadow-sm">
               <div className="mb-4 flex items-center gap-2">
-                <Users className="text-slate-700" size={18} />
-                <h2 className="text-lg font-bold">Team Summary</h2>
+                <Users className="text-[var(--text-main)]" size={18} />
+                <h2 className="text-lg font-bold text-[var(--text-main)]">
+                  Team Summary
+                </h2>
               </div>
 
-              <p className="text-sm leading-6 text-slate-600">
+              <p className="text-sm leading-6 text-[var(--text-muted-2)]">
                 This section helps show role distribution across frontend,
                 backend, design, product, and collaboration support.
               </p>
@@ -2188,21 +2261,21 @@ export default function ProjectWorkspacePage() {
       </div>
 
       {isAddTaskOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-[28px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-6 shadow-2xl">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900">
+                <h2 className="text-2xl font-bold text-[var(--text-main)]">
                   Create New Task
                 </h2>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-[var(--text-muted-2)]">
                   Add a task to this project workspace
                 </p>
               </div>
 
               <button
                 onClick={closeAddTaskModal}
-                className="rounded-xl border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-100"
+                className="rounded-xl border border-[var(--line-soft)] p-2 text-[var(--text-main)] transition hover:bg-[var(--muted)]"
                 aria-label="Close task modal"
               >
                 <X size={18} />
@@ -2211,7 +2284,7 @@ export default function ProjectWorkspacePage() {
 
             <form onSubmit={handleAddTask} className="space-y-4">
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
                   Task Title
                 </label>
                 <input
@@ -2219,19 +2292,19 @@ export default function ProjectWorkspacePage() {
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
                   placeholder="Ex: Build cohort creation flow"
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                  className="w-full rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 text-sm text-[var(--text-main)] outline-none transition focus:border-[var(--field-focus)]"
                 />
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
                     Assignee
                   </label>
                   <select
                     value={newTaskAssignee}
                     onChange={(e) => setNewTaskAssignee(e.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                    className="w-full rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 text-sm text-[var(--text-main)] outline-none transition focus:border-[var(--field-focus)]"
                   >
                     {projectState.team.map((member) => (
                       <option key={member.id} value={member.name}>
@@ -2242,7 +2315,7 @@ export default function ProjectWorkspacePage() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
                     Priority
                   </label>
                   <select
@@ -2250,7 +2323,7 @@ export default function ProjectWorkspacePage() {
                     onChange={(e) =>
                       setNewTaskPriority(e.target.value as TaskPriority)
                     }
-                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                    className="w-full rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 text-sm text-[var(--text-main)] outline-none transition focus:border-[var(--field-focus)]"
                   >
                     <option value="Low">Low</option>
                     <option value="Medium">Medium</option>
@@ -2260,7 +2333,7 @@ export default function ProjectWorkspacePage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
                   Status
                 </label>
                 <select
@@ -2268,7 +2341,7 @@ export default function ProjectWorkspacePage() {
                   onChange={(e) =>
                     setNewTaskStatus(e.target.value as TaskStatus)
                   }
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                  className="w-full rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 text-sm text-[var(--text-main)] outline-none transition focus:border-[var(--field-focus)]"
                 >
                   <option value="Backlog">Backlog</option>
                   <option value="Todo">Todo</option>
@@ -2279,19 +2352,19 @@ export default function ProjectWorkspacePage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
                   Due Date
                 </label>
                 <input
                   type="date"
                   value={newTaskDueDate}
                   onChange={(e) => setNewTaskDueDate(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                  className="w-full rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 text-sm text-[var(--text-main)] outline-none transition focus:border-[var(--field-focus)]"
                 />
               </div>
 
               {taskError ? (
-                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <div className="rounded-2xl border border-[var(--danger-soft-border)] bg-[var(--danger-soft-bg)] px-4 py-3 text-sm text-[var(--danger-soft-text)]">
                   {taskError}
                 </div>
               ) : null}
@@ -2300,14 +2373,14 @@ export default function ProjectWorkspacePage() {
                 <button
                   type="button"
                   onClick={closeAddTaskModal}
-                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                  className="rounded-2xl border border-[var(--line-soft)] px-4 py-2 text-sm font-semibold text-[var(--text-main)] transition hover:bg-[var(--muted)]"
                 >
                   Cancel
                 </button>
 
                 <button
                   type="submit"
-                  className="rounded-xl bg-slate-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+                  className="rounded-2xl bg-[var(--primary-btn-bg)] px-5 py-2 text-sm font-semibold text-[var(--primary-btn-text)] transition hover:opacity-90"
                 >
                   Create Task
                 </button>
@@ -2318,19 +2391,21 @@ export default function ProjectWorkspacePage() {
       )}
 
       {isEditTaskOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-[28px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-6 shadow-2xl">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900">Edit Task</h2>
-                <p className="mt-1 text-sm text-slate-500">
+                <h2 className="text-2xl font-bold text-[var(--text-main)]">
+                  Edit Task
+                </h2>
+                <p className="mt-1 text-sm text-[var(--text-muted-2)]">
                   Update the selected task details
                 </p>
               </div>
 
               <button
                 onClick={closeEditTaskModal}
-                className="rounded-xl border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-100"
+                className="rounded-xl border border-[var(--line-soft)] p-2 text-[var(--text-main)] transition hover:bg-[var(--muted)]"
                 aria-label="Close edit task modal"
               >
                 <X size={18} />
@@ -2339,26 +2414,26 @@ export default function ProjectWorkspacePage() {
 
             <form onSubmit={handleEditTask} className="space-y-4">
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
                   Task Title
                 </label>
                 <input
                   type="text"
                   value={editTaskTitle}
                   onChange={(e) => setEditTaskTitle(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                  className="w-full rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 text-sm text-[var(--text-main)] outline-none transition focus:border-[var(--field-focus)]"
                 />
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
                     Assignee
                   </label>
                   <select
                     value={editTaskAssignee}
                     onChange={(e) => setEditTaskAssignee(e.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                    className="w-full rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 text-sm text-[var(--text-main)] outline-none transition focus:border-[var(--field-focus)]"
                   >
                     {projectState.team.map((member) => (
                       <option key={member.id} value={member.name}>
@@ -2369,7 +2444,7 @@ export default function ProjectWorkspacePage() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
                     Priority
                   </label>
                   <select
@@ -2377,7 +2452,7 @@ export default function ProjectWorkspacePage() {
                     onChange={(e) =>
                       setEditTaskPriority(e.target.value as TaskPriority)
                     }
-                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                    className="w-full rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 text-sm text-[var(--text-main)] outline-none transition focus:border-[var(--field-focus)]"
                   >
                     <option value="Low">Low</option>
                     <option value="Medium">Medium</option>
@@ -2387,7 +2462,7 @@ export default function ProjectWorkspacePage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
                   Status
                 </label>
                 <select
@@ -2395,7 +2470,7 @@ export default function ProjectWorkspacePage() {
                   onChange={(e) =>
                     setEditTaskStatus(e.target.value as TaskStatus)
                   }
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                  className="w-full rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 text-sm text-[var(--text-main)] outline-none transition focus:border-[var(--field-focus)]"
                 >
                   <option value="Backlog">Backlog</option>
                   <option value="Todo">Todo</option>
@@ -2406,19 +2481,19 @@ export default function ProjectWorkspacePage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
                   Due Date
                 </label>
                 <input
                   type="date"
                   value={editTaskDueDate}
                   onChange={(e) => setEditTaskDueDate(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                  className="w-full rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 text-sm text-[var(--text-main)] outline-none transition focus:border-[var(--field-focus)]"
                 />
               </div>
 
               {editTaskError ? (
-                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <div className="rounded-2xl border border-[var(--danger-soft-border)] bg-[var(--danger-soft-bg)] px-4 py-3 text-sm text-[var(--danger-soft-text)]">
                   {editTaskError}
                 </div>
               ) : null}
@@ -2427,14 +2502,14 @@ export default function ProjectWorkspacePage() {
                 <button
                   type="button"
                   onClick={closeEditTaskModal}
-                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                  className="rounded-2xl border border-[var(--line-soft)] px-4 py-2 text-sm font-semibold text-[var(--text-main)] transition hover:bg-[var(--muted)]"
                 >
                   Cancel
                 </button>
 
                 <button
                   type="submit"
-                  className="rounded-xl bg-slate-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+                  className="rounded-2xl bg-[var(--primary-btn-bg)] px-5 py-2 text-sm font-semibold text-[var(--primary-btn-text)] transition hover:opacity-90"
                 >
                   Save Changes
                 </button>
@@ -2445,21 +2520,21 @@ export default function ProjectWorkspacePage() {
       )}
 
       {isPostUpdateOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-[28px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-6 shadow-2xl">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900">
+                <h2 className="text-2xl font-bold text-[var(--text-main)]">
                   Post Project Update
                 </h2>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-[var(--text-muted-2)]">
                   Share progress, blockers, or announcements with the team
                 </p>
               </div>
 
               <button
                 onClick={closePostUpdateModal}
-                className="rounded-xl border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-100"
+                className="rounded-xl border border-[var(--line-soft)] p-2 text-[var(--text-main)] transition hover:bg-[var(--muted)]"
                 aria-label="Close update modal"
               >
                 <X size={18} />
@@ -2468,7 +2543,7 @@ export default function ProjectWorkspacePage() {
 
             <form onSubmit={handlePostUpdate} className="space-y-4">
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
                   Update Message
                 </label>
                 <textarea
@@ -2476,12 +2551,12 @@ export default function ProjectWorkspacePage() {
                   onChange={(e) => setNewUpdateText(e.target.value)}
                   placeholder="Ex: Finished onboarding UI and started integrating project workspace actions."
                   rows={5}
-                  className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                  className="w-full resize-none rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 text-sm text-[var(--text-main)] outline-none transition focus:border-[var(--field-focus)]"
                 />
               </div>
 
               {updateError ? (
-                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <div className="rounded-2xl border border-[var(--danger-soft-border)] bg-[var(--danger-soft-bg)] px-4 py-3 text-sm text-[var(--danger-soft-text)]">
                   {updateError}
                 </div>
               ) : null}
@@ -2490,14 +2565,14 @@ export default function ProjectWorkspacePage() {
                 <button
                   type="button"
                   onClick={closePostUpdateModal}
-                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                  className="rounded-2xl border border-[var(--line-soft)] px-4 py-2 text-sm font-semibold text-[var(--text-main)] transition hover:bg-[var(--muted)]"
                 >
                   Cancel
                 </button>
 
                 <button
                   type="submit"
-                  className="rounded-xl bg-slate-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+                  className="rounded-2xl bg-[var(--primary-btn-bg)] px-5 py-2 text-sm font-semibold text-[var(--primary-btn-text)] transition hover:opacity-90"
                 >
                   Post Update
                 </button>
@@ -2508,24 +2583,24 @@ export default function ProjectWorkspacePage() {
       )}
 
       {isTaskDetailOpen && selectedTask && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-2xl rounded-[28px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-6 shadow-2xl">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
-                <div className="mb-2 inline-flex rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700">
+                <div className="mb-2 inline-flex rounded-full border border-[var(--line-soft)] bg-[var(--muted)] px-3 py-1 text-xs font-semibold text-[var(--text-main)]">
                   Task Details
                 </div>
-                <h2 className="text-2xl font-bold text-slate-900">
+                <h2 className="text-2xl font-bold text-[var(--text-main)]">
                   {selectedTask.title}
                 </h2>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-[var(--text-muted-2)]">
                   Detailed view of the selected task
                 </p>
               </div>
 
               <button
                 onClick={closeTaskDetailModal}
-                className="rounded-xl border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-100"
+                className="rounded-xl border border-[var(--line-soft)] p-2 text-[var(--text-main)] transition hover:bg-[var(--muted)]"
                 aria-label="Close task detail modal"
               >
                 <X size={18} />
@@ -2533,17 +2608,17 @@ export default function ProjectWorkspacePage() {
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted-2)]">
                   Assignee
                 </p>
-                <p className="mt-2 font-semibold text-slate-800">
+                <p className="mt-2 font-semibold text-[var(--text-main)]">
                   {selectedTask.assignee}
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted-2)]">
                   Due Date
                 </p>
                 <div className="mt-2">
@@ -2557,8 +2632,8 @@ export default function ProjectWorkspacePage() {
                 </div>
               </div>
 
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted-2)]">
                   Priority
                 </p>
                 <div className="mt-2">
@@ -2572,8 +2647,8 @@ export default function ProjectWorkspacePage() {
                 </div>
               </div>
 
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted-2)]">
                   Status
                 </p>
                 <div className="mt-2">
@@ -2588,28 +2663,28 @@ export default function ProjectWorkspacePage() {
               </div>
             </div>
 
-            <div className="mt-4 rounded-2xl bg-slate-50 p-4">
+            <div className="mt-4 rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)] p-4">
               <div className="mb-2 flex items-center gap-2">
-                <FileText size={16} className="text-slate-500" />
-                <p className="text-sm font-semibold text-slate-700">
+                <FileText size={16} className="text-[var(--text-muted-2)]" />
+                <p className="text-sm font-semibold text-[var(--text-main)]">
                   Description
                 </p>
               </div>
-              <p className="text-sm leading-6 text-slate-600">
+              <p className="text-sm leading-6 text-[var(--text-muted-2)]">
                 This task currently uses placeholder task details. When backend
                 APIs arrive, you can expand this modal with task description,
                 comments, checklist items, attachments, and audit history.
               </p>
             </div>
 
-            <div className="mt-4 rounded-2xl bg-slate-50 p-4">
+            <div className="mt-4 rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)] p-4">
               <div className="mb-2 flex items-center gap-2">
-                <MessageSquare size={16} className="text-slate-500" />
-                <p className="text-sm font-semibold text-slate-700">
+                <MessageSquare size={16} className="text-[var(--text-muted-2)]" />
+                <p className="text-sm font-semibold text-[var(--text-main)]">
                   Comments & Activity
                 </p>
               </div>
-              <p className="text-sm leading-6 text-slate-600">
+              <p className="text-sm leading-6 text-[var(--text-muted-2)]">
                 No task-level comments yet. Later, this can show discussion,
                 task-specific updates, mentions, and change history.
               </p>
@@ -2618,7 +2693,7 @@ export default function ProjectWorkspacePage() {
             <div className="mt-6 flex flex-wrap justify-end gap-3">
               <button
                 onClick={() => openEditTaskModal(selectedTask)}
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                className="inline-flex items-center gap-2 rounded-2xl border border-[var(--line-soft)] px-4 py-2 text-sm font-semibold text-[var(--text-main)] transition hover:bg-[var(--muted)]"
               >
                 <Pencil size={14} />
                 Edit Task
@@ -2626,7 +2701,7 @@ export default function ProjectWorkspacePage() {
 
               <button
                 onClick={() => openDeleteConfirmModal(selectedTask)}
-                className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100"
+                className="inline-flex items-center gap-2 rounded-2xl border border-[var(--danger-soft-border)] bg-[var(--danger-soft-bg)] px-4 py-2 text-sm font-semibold text-[var(--danger-soft-text)] transition hover:opacity-80"
               >
                 <Trash2 size={14} />
                 Delete Task
@@ -2634,7 +2709,7 @@ export default function ProjectWorkspacePage() {
 
               <button
                 onClick={closeTaskDetailModal}
-                className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+                className="rounded-2xl bg-[var(--primary-btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--primary-btn-text)] transition hover:opacity-90"
               >
                 Close
               </button>
@@ -2644,19 +2719,19 @@ export default function ProjectWorkspacePage() {
       )}
 
       {isDeleteConfirmOpen && taskToDelete && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/45 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[28px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-6 shadow-2xl">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div className="flex items-start gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-100 text-red-700">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--danger-soft-border)] bg-[var(--danger-soft-bg)] text-[var(--danger-soft-text)]">
                   <AlertTriangle size={22} />
                 </div>
 
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900">
+                  <h2 className="text-xl font-bold text-[var(--text-main)]">
                     Delete Task?
                   </h2>
-                  <p className="mt-1 text-sm text-slate-500">
+                  <p className="mt-1 text-sm text-[var(--text-muted-2)]">
                     This action cannot be undone in the current workspace state.
                   </p>
                 </div>
@@ -2664,19 +2739,21 @@ export default function ProjectWorkspacePage() {
 
               <button
                 onClick={closeDeleteConfirmModal}
-                className="rounded-xl border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-100"
+                className="rounded-xl border border-[var(--line-soft)] p-2 text-[var(--text-main)] transition hover:bg-[var(--muted)]"
                 aria-label="Close delete confirmation modal"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="rounded-2xl border border-red-100 bg-red-50 p-4">
-              <p className="text-sm text-slate-600">You are about to delete:</p>
-              <p className="mt-2 font-semibold text-slate-900">
+            <div className="rounded-2xl border border-[var(--danger-soft-border)] bg-[var(--danger-soft-bg)] p-4">
+              <p className="text-sm text-[var(--text-muted-2)]">
+                You are about to delete:
+              </p>
+              <p className="mt-2 font-semibold text-[var(--text-main)]">
                 {taskToDelete.title}
               </p>
-              <p className="mt-1 text-sm text-slate-600">
+              <p className="mt-1 text-sm text-[var(--text-muted-2)]">
                 Assignee: {taskToDelete.assignee}
               </p>
             </div>
@@ -2684,14 +2761,14 @@ export default function ProjectWorkspacePage() {
             <div className="mt-6 flex flex-wrap justify-end gap-3">
               <button
                 onClick={closeDeleteConfirmModal}
-                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                className="rounded-2xl border border-[var(--line-soft)] px-4 py-2 text-sm font-semibold text-[var(--text-main)] transition hover:bg-[var(--muted)]"
               >
                 Cancel
               </button>
 
               <button
                 onClick={() => handleDeleteTask(taskToDelete.id)}
-                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
+                className="rounded-2xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
               >
                 Confirm Delete
               </button>
@@ -2701,21 +2778,21 @@ export default function ProjectWorkspacePage() {
       )}
 
       {isAddMilestoneOpen && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 px-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/45 px-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[28px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-6 shadow-2xl">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900">
+                <h2 className="text-2xl font-bold text-[var(--text-main)]">
                   Create Milestone
                 </h2>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-[var(--text-muted-2)]">
                   Add a major project phase and link tasks to it
                 </p>
               </div>
 
               <button
                 onClick={closeAddMilestoneModal}
-                className="rounded-xl border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-100"
+                className="rounded-xl border border-[var(--line-soft)] p-2 text-[var(--text-main)] transition hover:bg-[var(--muted)]"
                 aria-label="Close milestone modal"
               >
                 <X size={18} />
@@ -2724,7 +2801,7 @@ export default function ProjectWorkspacePage() {
 
             <form onSubmit={handleAddMilestone} className="space-y-4">
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
                   Milestone Title
                 </label>
                 <input
@@ -2732,12 +2809,12 @@ export default function ProjectWorkspacePage() {
                   value={milestoneTitle}
                   onChange={(e) => setMilestoneTitle(e.target.value)}
                   placeholder="Ex: Workspace MVP"
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                  className="w-full rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 text-sm text-[var(--text-main)] outline-none transition focus:border-[var(--field-focus)]"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
                   Description
                 </label>
                 <textarea
@@ -2745,19 +2822,19 @@ export default function ProjectWorkspacePage() {
                   onChange={(e) => setMilestoneDescription(e.target.value)}
                   rows={4}
                   placeholder="Ex: Complete core workspace features for startup collaboration"
-                  className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                  className="w-full resize-none rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 text-sm text-[var(--text-main)] outline-none transition focus:border-[var(--field-focus)]"
                 />
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
                     Owner
                   </label>
                   <select
                     value={milestoneOwner}
                     onChange={(e) => setMilestoneOwner(e.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                    className="w-full rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 text-sm text-[var(--text-main)] outline-none transition focus:border-[var(--field-focus)]"
                   >
                     {projectState.team.map((member) => (
                       <option key={member.id} value={member.name}>
@@ -2768,7 +2845,7 @@ export default function ProjectWorkspacePage() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
                     Priority
                   </label>
                   <select
@@ -2776,7 +2853,7 @@ export default function ProjectWorkspacePage() {
                     onChange={(e) =>
                       setMilestonePriority(e.target.value as MilestonePriority)
                     }
-                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                    className="w-full rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 text-sm text-[var(--text-main)] outline-none transition focus:border-[var(--field-focus)]"
                   >
                     <option value="Low">Low</option>
                     <option value="Medium">Medium</option>
@@ -2786,49 +2863,49 @@ export default function ProjectWorkspacePage() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
                     Due Date
                   </label>
                   <input
                     type="date"
                     value={milestoneDueDate}
                     onChange={(e) => setMilestoneDueDate(e.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                    className="w-full rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 text-sm text-[var(--text-main)] outline-none transition focus:border-[var(--field-focus)]"
                   />
                 </div>
               </div>
 
               <div>
                 <div className="mb-2 flex items-center justify-between gap-3">
-                  <label className="block text-sm font-semibold text-slate-700">
+                  <label className="block text-sm font-semibold text-[var(--text-main)]">
                     Link Tasks
                   </label>
-                  <span className="text-xs font-medium text-slate-500">
+                  <span className="text-xs font-medium text-[var(--text-muted-2)]">
                     {milestoneLinkedTaskIds.length} selected
                   </span>
                 </div>
 
-                <div className="max-h-72 space-y-3 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <div className="max-h-72 space-y-3 overflow-y-auto rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)] p-3">
                   {projectState.tasks.length === 0 ? (
-                    <div className="rounded-xl bg-white p-4 text-sm text-slate-500">
+                    <div className="rounded-xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 text-sm text-[var(--text-muted-2)]">
                       No tasks available to link yet.
                     </div>
                   ) : (
                     projectState.tasks.map((task) => (
                       <label
                         key={task.id}
-                        className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition hover:bg-slate-50"
+                        className="flex cursor-pointer items-start gap-3 rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 transition hover:bg-[var(--muted)]"
                       >
                         <input
                           type="checkbox"
                           checked={milestoneLinkedTaskIds.includes(task.id)}
                           onChange={() => toggleMilestoneTask(task.id)}
-                          className="mt-1 h-4 w-4 rounded border-slate-300"
+                          className="mt-1 h-4 w-4 rounded border-[var(--line-soft)]"
                         />
 
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <p className="font-medium text-slate-800">
+                            <p className="font-medium text-[var(--text-main)]">
                               {task.title}
                             </p>
                             <span
@@ -2846,7 +2923,7 @@ export default function ProjectWorkspacePage() {
                               {task.priority}
                             </span>
                           </div>
-                          <p className="mt-1 text-xs text-slate-500">
+                          <p className="mt-1 text-xs text-[var(--text-muted-2)]">
                             {task.assignee} • {task.dueDate}
                           </p>
                         </div>
@@ -2857,7 +2934,7 @@ export default function ProjectWorkspacePage() {
               </div>
 
               {milestoneError ? (
-                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <div className="rounded-2xl border border-[var(--danger-soft-border)] bg-[var(--danger-soft-bg)] px-4 py-3 text-sm text-[var(--danger-soft-text)]">
                   {milestoneError}
                 </div>
               ) : null}
@@ -2866,14 +2943,14 @@ export default function ProjectWorkspacePage() {
                 <button
                   type="button"
                   onClick={closeAddMilestoneModal}
-                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                  className="rounded-2xl border border-[var(--line-soft)] px-4 py-2 text-sm font-semibold text-[var(--text-main)] transition hover:bg-[var(--muted)]"
                 >
                   Cancel
                 </button>
 
                 <button
                   type="submit"
-                  className="rounded-xl bg-slate-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+                  className="rounded-2xl bg-[var(--primary-btn-bg)] px-5 py-2 text-sm font-semibold text-[var(--primary-btn-text)] transition hover:opacity-90"
                 >
                   Create Milestone
                 </button>
@@ -2884,21 +2961,21 @@ export default function ProjectWorkspacePage() {
       )}
 
       {isEditMilestoneOpen && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 px-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/45 px-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[28px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-6 shadow-2xl">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900">
+                <h2 className="text-2xl font-bold text-[var(--text-main)]">
                   Edit Milestone
                 </h2>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-[var(--text-muted-2)]">
                   Update milestone details and linked tasks
                 </p>
               </div>
 
               <button
                 onClick={closeEditMilestoneModal}
-                className="rounded-xl border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-100"
+                className="rounded-xl border border-[var(--line-soft)] p-2 text-[var(--text-main)] transition hover:bg-[var(--muted)]"
                 aria-label="Close edit milestone modal"
               >
                 <X size={18} />
@@ -2907,38 +2984,38 @@ export default function ProjectWorkspacePage() {
 
             <form onSubmit={handleEditMilestone} className="space-y-4">
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
                   Milestone Title
                 </label>
                 <input
                   type="text"
                   value={editMilestoneTitle}
                   onChange={(e) => setEditMilestoneTitle(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                  className="w-full rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 text-sm text-[var(--text-main)] outline-none transition focus:border-[var(--field-focus)]"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
                   Description
                 </label>
                 <textarea
                   value={editMilestoneDescription}
                   onChange={(e) => setEditMilestoneDescription(e.target.value)}
                   rows={4}
-                  className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                  className="w-full resize-none rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 text-sm text-[var(--text-main)] outline-none transition focus:border-[var(--field-focus)]"
                 />
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
                     Owner
                   </label>
                   <select
                     value={editMilestoneOwner}
                     onChange={(e) => setEditMilestoneOwner(e.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                    className="w-full rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 text-sm text-[var(--text-main)] outline-none transition focus:border-[var(--field-focus)]"
                   >
                     {projectState.team.map((member) => (
                       <option key={member.id} value={member.name}>
@@ -2949,7 +3026,7 @@ export default function ProjectWorkspacePage() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
                     Priority
                   </label>
                   <select
@@ -2957,7 +3034,7 @@ export default function ProjectWorkspacePage() {
                     onChange={(e) =>
                       setEditMilestonePriority(e.target.value as MilestonePriority)
                     }
-                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                    className="w-full rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 text-sm text-[var(--text-main)] outline-none transition focus:border-[var(--field-focus)]"
                   >
                     <option value="Low">Low</option>
                     <option value="Medium">Medium</option>
@@ -2967,49 +3044,49 @@ export default function ProjectWorkspacePage() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
                     Due Date
                   </label>
                   <input
                     type="date"
                     value={editMilestoneDueDate}
                     onChange={(e) => setEditMilestoneDueDate(e.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                    className="w-full rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 text-sm text-[var(--text-main)] outline-none transition focus:border-[var(--field-focus)]"
                   />
                 </div>
               </div>
 
               <div>
                 <div className="mb-2 flex items-center justify-between gap-3">
-                  <label className="block text-sm font-semibold text-slate-700">
+                  <label className="block text-sm font-semibold text-[var(--text-main)]">
                     Linked Tasks
                   </label>
-                  <span className="text-xs font-medium text-slate-500">
+                  <span className="text-xs font-medium text-[var(--text-muted-2)]">
                     {editMilestoneLinkedTaskIds.length} selected
                   </span>
                 </div>
 
-                <div className="max-h-72 space-y-3 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <div className="max-h-72 space-y-3 overflow-y-auto rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)] p-3">
                   {projectState.tasks.length === 0 ? (
-                    <div className="rounded-xl bg-white p-4 text-sm text-slate-500">
+                    <div className="rounded-xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 text-sm text-[var(--text-muted-2)]">
                       No tasks available to link yet.
                     </div>
                   ) : (
                     projectState.tasks.map((task) => (
                       <label
                         key={task.id}
-                        className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition hover:bg-slate-50"
+                        className="flex cursor-pointer items-start gap-3 rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 transition hover:bg-[var(--muted)]"
                       >
                         <input
                           type="checkbox"
                           checked={editMilestoneLinkedTaskIds.includes(task.id)}
                           onChange={() => toggleEditMilestoneTask(task.id)}
-                          className="mt-1 h-4 w-4 rounded border-slate-300"
+                          className="mt-1 h-4 w-4 rounded border-[var(--line-soft)]"
                         />
 
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <p className="font-medium text-slate-800">
+                            <p className="font-medium text-[var(--text-main)]">
                               {task.title}
                             </p>
                             <span
@@ -3027,7 +3104,7 @@ export default function ProjectWorkspacePage() {
                               {task.priority}
                             </span>
                           </div>
-                          <p className="mt-1 text-xs text-slate-500">
+                          <p className="mt-1 text-xs text-[var(--text-muted-2)]">
                             {task.assignee} • {task.dueDate}
                           </p>
                         </div>
@@ -3038,7 +3115,7 @@ export default function ProjectWorkspacePage() {
               </div>
 
               {editMilestoneError ? (
-                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <div className="rounded-2xl border border-[var(--danger-soft-border)] bg-[var(--danger-soft-bg)] px-4 py-3 text-sm text-[var(--danger-soft-text)]">
                   {editMilestoneError}
                 </div>
               ) : null}
@@ -3047,14 +3124,14 @@ export default function ProjectWorkspacePage() {
                 <button
                   type="button"
                   onClick={closeEditMilestoneModal}
-                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                  className="rounded-2xl border border-[var(--line-soft)] px-4 py-2 text-sm font-semibold text-[var(--text-main)] transition hover:bg-[var(--muted)]"
                 >
                   Cancel
                 </button>
 
                 <button
                   type="submit"
-                  className="rounded-xl bg-slate-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+                  className="rounded-2xl bg-[var(--primary-btn-bg)] px-5 py-2 text-sm font-semibold text-[var(--primary-btn-text)] transition hover:opacity-90"
                 >
                   Save Milestone
                 </button>
@@ -3065,19 +3142,19 @@ export default function ProjectWorkspacePage() {
       )}
 
       {isDeleteMilestoneOpen && milestoneToDelete && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/50 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/45 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[28px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-6 shadow-2xl">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div className="flex items-start gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-100 text-red-700">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--danger-soft-border)] bg-[var(--danger-soft-bg)] text-[var(--danger-soft-text)]">
                   <AlertTriangle size={22} />
                 </div>
 
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900">
+                  <h2 className="text-xl font-bold text-[var(--text-main)]">
                     Delete Milestone?
                   </h2>
-                  <p className="mt-1 text-sm text-slate-500">
+                  <p className="mt-1 text-sm text-[var(--text-muted-2)]">
                     This will remove the milestone from the roadmap.
                   </p>
                 </div>
@@ -3085,22 +3162,24 @@ export default function ProjectWorkspacePage() {
 
               <button
                 onClick={closeDeleteMilestoneModal}
-                className="rounded-xl border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-100"
+                className="rounded-xl border border-[var(--line-soft)] p-2 text-[var(--text-main)] transition hover:bg-[var(--muted)]"
                 aria-label="Close delete milestone confirmation modal"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="rounded-2xl border border-red-100 bg-red-50 p-4">
-              <p className="text-sm text-slate-600">You are about to delete:</p>
-              <p className="mt-2 font-semibold text-slate-900">
+            <div className="rounded-2xl border border-[var(--danger-soft-border)] bg-[var(--danger-soft-bg)] p-4">
+              <p className="text-sm text-[var(--text-muted-2)]">
+                You are about to delete:
+              </p>
+              <p className="mt-2 font-semibold text-[var(--text-main)]">
                 {milestoneToDelete.title}
               </p>
-              <p className="mt-1 text-sm text-slate-600">
+              <p className="mt-1 text-sm text-[var(--text-muted-2)]">
                 Owner: {milestoneToDelete.owner}
               </p>
-              <p className="mt-1 text-sm text-slate-600">
+              <p className="mt-1 text-sm text-[var(--text-muted-2)]">
                 Linked tasks: {milestoneToDelete.linkedTasks.length}
               </p>
             </div>
@@ -3108,14 +3187,14 @@ export default function ProjectWorkspacePage() {
             <div className="mt-6 flex flex-wrap justify-end gap-3">
               <button
                 onClick={closeDeleteMilestoneModal}
-                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                className="rounded-2xl border border-[var(--line-soft)] px-4 py-2 text-sm font-semibold text-[var(--text-main)] transition hover:bg-[var(--muted)]"
               >
                 Cancel
               </button>
 
               <button
                 onClick={() => handleDeleteMilestone(milestoneToDelete.id)}
-                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
+                className="rounded-2xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
               >
                 Confirm Delete
               </button>
@@ -3125,4 +3204,4 @@ export default function ProjectWorkspacePage() {
       )}
     </main>
   );
-}
+} 
