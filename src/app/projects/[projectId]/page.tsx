@@ -840,57 +840,36 @@ function getNextMilestoneId() {
   }
 
   function handleAddTask(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  e.preventDefault();
 
-    const trimmedTitle = newTaskTitle.trim();
-    const trimmedAssignee = newTaskAssignee.trim();
+  if (!projectState) return;
 
-    if (!trimmedTitle) {
-      setTaskError("Please enter a task title.");
-      return;
-    }
+  const trimmedTitle = newTaskTitle.trim();
+  const trimmedAssignee = newTaskAssignee.trim();
 
-    if (!trimmedAssignee) {
-      setTaskError("Please select an assignee.");
-      return;
-    }
-
-    if (!newTaskDueDate) {
-      setTaskError("Please select a due date.");
-      return;
-    }
-
-    const nextTaskId =
-      projectState.tasks.length > 0
-        ? Math.max(...projectState.tasks.map((task) => task.id)) + 1
-        : 1;
-
-    const createdTask: TaskItem = {
-      id: nextTaskId,
-      title: trimmedTitle,
-      assignee: trimmedAssignee,
-      priority: newTaskPriority,
-      status: newTaskStatus,
-      dueDate: newTaskDueDate,
-    };
-
-    const createdActivity: ActivityItem = {
-      id: getNextActivityId(),
-      text: `New task '${trimmedTitle}' created and assigned to ${trimmedAssignee}`,
-      time: formatTimeNow(),
-    };
-
-    setProjectState({
-      ...projectState,
-      tasks: [createdTask, ...projectState.tasks],
-      activity: [createdActivity, ...projectState.activity],
-    });
-
-    closeAddTaskModal();
+  if (!trimmedTitle) {
+    setTaskError("Please enter a task title.");
+    return;
   }
+
+  if (!trimmedAssignee) {
+    setTaskError("Please select an assignee.");
+    return;
+  }
+
+  if (!newTaskDueDate) {
+    setTaskError("Please select a due date.");
+    return;
+  }
+
+  const nextTaskId =
+    projectState.tasks.length > 0
+      ? Math.max(...projectState.tasks.map((task) => task.id)) + 1
+      : 1;
 
   function handleEditTask(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!projectState) return;
 
     if (editingTaskId === null) return;
 
@@ -955,6 +934,7 @@ function getNextMilestoneId() {
   }
 
   function handleDeleteTask(taskId: number) {
+    if (!projectState) return;
     const taskToDeleteNow = projectState.tasks.find((task) => task.id === taskId);
     if (!taskToDeleteNow) return;
 
@@ -986,6 +966,7 @@ function getNextMilestoneId() {
   }
 
   function handleStatusChange(taskId: number, nextStatus: TaskStatus) {
+    if (!projectState) return;
     const currentTask = projectState.tasks.find((task) => task.id === taskId);
 
     if (!currentTask || currentTask.status === nextStatus) {
@@ -1014,6 +995,7 @@ function getNextMilestoneId() {
   }
 
   function handleDragStart(event: DragStartEvent) {
+    if (!projectState) return;
     const taskId = Number(event.active.id);
     const foundTask =
       projectState.tasks.find((task) => task.id === taskId) || null;
@@ -1025,6 +1007,7 @@ function getNextMilestoneId() {
   }
 
   function handleDragEnd(event: DragEndEvent) {
+    if (!projectState) return;
     const { active, over } = event;
 
     setActiveDragTask(null);
@@ -1053,6 +1036,7 @@ function getNextMilestoneId() {
   }
 
   function handlePostUpdate(e: React.FormEvent<HTMLFormElement>) {
+    if (!projectState) return;
     e.preventDefault();
 
     const trimmedUpdate = newUpdateText.trim();
@@ -1129,6 +1113,7 @@ function getNextMilestoneId() {
   }
 
   function handleEditMilestone(e: React.FormEvent<HTMLFormElement>) {
+    if (!projectState) return;
     e.preventDefault();
 
     if (editingMilestoneId === null) return;
@@ -1193,6 +1178,7 @@ function getNextMilestoneId() {
   }
 
   function handleDeleteMilestone(milestoneId: number) {
+    if (!projectState) return;
     const deletingMilestone = projectState.milestones.find(
       (milestone) => milestone.id === milestoneId,
     );
