@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Icon } from "@iconify/react";
 
 type Question = {
   id: string;
@@ -71,15 +72,16 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 export default function ProfileBuilderPage() {
   const router = useRouter();
 
-  const [qIndex, setQIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [input, setInput] = useState("");
+  const [qIndex, setQIndex] = useState(0);
   const [done, setDone] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const scrollAreaRef = useRef<HTMLDivElement | null>(null);
 
   const total = QUESTIONS.length;
 
@@ -103,34 +105,36 @@ export default function ProfileBuilderPage() {
     [done, qIndex, total]
   );
 
-  // Guard routes
   useEffect(() => {
     const signupCompleted = localStorage.getItem("signupCompleted") === "true";
-    const profileCompleted = localStorage.getItem("profileCompleted") === "true";
 
     if (!signupCompleted) {
       router.replace("/");
-      return;
-    }
-
-    if (profileCompleted) {
-      router.replace("/home");
     }
   }, [router]);
 
-  // 🔥 Perfect auto-scroll
   useEffect(() => {
-    const id = setTimeout(() => {
-      bottomRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "end",
-      });
-    }, 80);
+    const el = scrollAreaRef.current;
+    if (!el) return;
 
-    return () => clearTimeout(id);
+    const scrollToBottom = () => {
+      el.scrollTo({
+        top: el.scrollHeight,
+        behavior: "smooth",
+      });
+    };
+
+    const raf1 = requestAnimationFrame(() => {
+      scrollToBottom();
+      const raf2 = requestAnimationFrame(() => {
+        scrollToBottom();
+      });
+      return () => cancelAnimationFrame(raf2);
+    });
+
+    return () => cancelAnimationFrame(raf1);
   }, [messages, isTyping]);
 
-  // Auto resize textarea
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
@@ -209,116 +213,138 @@ export default function ProfileBuilderPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-[#F4F6FB] text-slate-900">
-      {/* HEADER */}
-      <div className="sticky top-0 z-30 border-b border-slate-200 bg-white">
-        <div className="px-4 py-3 flex items-center justify-between">
-          <div className="text-[18px] font-bold">
-            Build your SphereNet profile
-          </div>
-          <div className="text-sm text-slate-500">
-            Step {activeStep} of {total}
+    <div className="h-dvh overflow-hidden bg-[var(--app-bg)] text-[var(--text-main)]">
+      <div className="sticky top-0 z-30 bg-[var(--surface-solid)]">
+        <div className="mx-auto w-full max-w-[480px] px-4 py-4">
+          <div className="min-w-0">
+            <div className="text-[1.15rem] font-extrabold tracking-[-0.03em] text-[var(--text-main)]">
+              Build your SphereNet profile
+            </div>
+            <div className="mt-1 text-sm text-[var(--text-muted-2)]">
+              Step {activeStep} of {total}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* CHAT AREA */}
-      <div className="px-4 pt-4 pb-[210px] space-y-4">
-        {messages.map((m) => {
-          if (m.kind === "user") {
+      <div
+        ref={scrollAreaRef}
+        className="mx-auto h-[calc(100dvh-88px)] w-full max-w-[480px] overflow-y-auto px-4 pt-3 pb-[190px]"
+      >
+        <div className="space-y-4">
+          {messages.map((m) => {
+            if (m.kind === "user") {
+              return (
+                <div key={m.id} className="flex justify-end">
+                  <div className="max-w-[78%] rounded-[20px] rounded-br-md bg-[var(--primary-btn-bg)] px-4 py-3 text-[15px] font-medium leading-6 text-[var(--primary-btn-text)] shadow-sm break-words">
+                    {m.text}
+                  </div>
+                </div>
+              );
+            }
+
             return (
-              <div key={m.id} className="flex justify-end">
-                <div className="max-w-[82%] rounded-2xl bg-[#2D6BFF] px-4 py-3 text-[15px] font-semibold text-white">
-                  {m.text}
+              <div key={m.id} className="flex items-start gap-2">
+                <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--line-soft)] bg-[var(--surface-solid)] shadow-sm">
+                  <Icon
+                    icon="material-symbols:support-agent-rounded"
+                    width="18"
+                    height="18"
+                    className="text-[var(--text-main)]"
+                  />
+                </div>
+
+                <div className="max-w-[78%]">
+                  {m.kind === "intro" || m.kind === "botText" ? (
+                    <div className="rounded-[20px] rounded-bl-md border border-[var(--line-soft)] bg-[var(--surface-solid)] px-4 py-3 text-[15px] leading-6 text-[var(--text-main)] shadow-sm break-words">
+                      {m.text}
+                    </div>
+                  ) : (
+                    <div className="rounded-[20px] rounded-bl-md border border-[var(--line-soft)] bg-[var(--surface-solid)] px-4 py-4 shadow-sm">
+                      <div className="text-[17px] font-bold leading-7 text-[var(--text-main)] break-words">
+                        {m.title}
+                      </div>
+
+                      {m.helper && (
+                        <div className="mt-2 text-sm leading-6 text-[var(--text-muted-2)] break-words">
+                          {m.helper}
+                        </div>
+                      )}
+
+                      {m.example && (
+                        <div className="mt-3 text-sm italic leading-7 text-[var(--text-soft-2)] break-words">
+                          {m.example}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             );
-          }
+          })}
 
-          return (
-            <div key={m.id} className="flex items-start gap-3">
-              <div className="h-9 w-9 rounded-full bg-[#2D6BFF]/15 flex items-center justify-center">
-                <div className="h-4 w-4 rounded-full bg-[#2D6BFF]/40" />
+          {isTyping && (
+            <div className="flex items-center gap-2">
+              <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--line-soft)] bg-[var(--surface-solid)] shadow-sm">
+                <Icon
+                  icon="material-symbols:support-agent-rounded"
+                  width="18"
+                  height="18"
+                  className="text-[var(--text-main)]"
+                />
               </div>
 
-              <div className="max-w-[85%]">
-                {m.kind === "intro" || m.kind === "botText" ? (
-                  <div className="rounded-2xl bg-white border border-slate-200 px-4 py-3 text-[15px] shadow-sm">
-                    {m.text}
-                  </div>
-                ) : (
-                  <div className="rounded-2xl bg-white border border-slate-200 px-4 py-4 shadow-sm">
-                    <div className="text-[17px] font-bold">
-                      {m.title}
-                    </div>
-                    {m.helper && (
-                      <div className="mt-2 text-sm text-slate-600">
-                        {m.helper}
-                      </div>
-                    )}
-                    {m.example && (
-                      <div className="mt-3 text-sm text-slate-500 italic">
-                        {m.example}
-                      </div>
-                    )}
-                  </div>
-                )}
+              <div className="max-w-[78%] rounded-[20px] rounded-bl-md border border-[var(--line-soft)] bg-[var(--surface-solid)] px-4 py-3 text-sm italic text-[var(--text-muted-2)] shadow-sm">
+                SphereGuide is typing...
               </div>
             </div>
-          );
-        })}
+          )}
 
-        {isTyping && (
-          <div className="text-sm text-slate-500 italic pl-12">
-            SphereGuide is typing...
-          </div>
-        )}
-
-        {/* Anchor for smooth scroll */}
-        <div ref={bottomRef} />
+          <div ref={bottomRef} />
+        </div>
       </div>
 
-      {/* COMPOSER */}
-      <div className="fixed bottom-0 left-0 right-0 border-t bg-white p-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
-        <div className="flex items-end gap-3">
-          <div className="flex-1 border border-slate-200 rounded-2xl px-4 py-3">
-            <textarea
-              ref={textareaRef}
-              value={input}
-              disabled={done || isBusy}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  onSend();
+      <div className="fixed bottom-0 left-0 right-0 bg-[var(--surface-solid)]">
+        <div className="mx-auto w-full max-w-[480px] px-4 pt-3 pb-[calc(16px+env(safe-area-inset-bottom))]">
+          <div className="flex items-end gap-3">
+            <div className="flex-1 rounded-[22px] border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 shadow-sm">
+              <textarea
+                ref={textareaRef}
+                value={input}
+                disabled={done || isBusy}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    onSend();
+                  }
+                }}
+                placeholder={
+                  isBusy
+                    ? "SphereGuide is responding..."
+                    : "Type your answer..."
                 }
-              }}
-              placeholder={
-                isBusy
-                  ? "SphereGuide is responding..."
-                  : "Type your answer..."
-              }
-              rows={1}
-              className="w-full resize-none bg-transparent outline-none text-[15px]"
-            />
+                rows={1}
+                className="w-full resize-none bg-transparent text-[15px] leading-6 text-[var(--text-main)] outline-none placeholder:text-[var(--text-muted-2)]"
+              />
+            </div>
+
+            <button
+              onClick={onSend}
+              disabled={done || isBusy || input.trim().length === 0}
+              className="h-12 shrink-0 rounded-[18px] bg-[var(--primary-btn-bg)] px-6 font-bold text-[var(--primary-btn-text)] shadow-sm disabled:opacity-50"
+            >
+              Send
+            </button>
           </div>
 
           <button
-            onClick={onSend}
-            disabled={done || isBusy || input.trim().length === 0}
-            className="h-12 px-6 rounded-2xl bg-[#2D6BFF] text-white font-bold disabled:opacity-50"
+            onClick={onContinue}
+            className="mt-3 h-12 w-full rounded-[18px] border border-[var(--line-soft)] bg-[var(--muted)] font-bold text-[var(--text-main)] shadow-sm"
           >
-            Send
+            Continue →
           </button>
         </div>
-
-        <button
-          onClick={onContinue}
-          disabled={!done}
-          className="mt-3 w-full h-12 rounded-2xl bg-slate-100 text-slate-800 font-bold disabled:opacity-50"
-        >
-          Continue →
-        </button>
       </div>
     </div>
   );

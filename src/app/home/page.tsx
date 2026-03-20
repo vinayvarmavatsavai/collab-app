@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "../navigation/Header";
 import BottomNav from "../navigation/BottomNav";
+
 type ActiveCollab = {
   id: number;
   title: string;
@@ -95,18 +96,36 @@ export default function HomePage() {
             id: 901,
             title: "AI Model Optimization",
             status: "Active",
-            deadline: "Deadline: 10/03/2026",
+            deadline: "Deadline: 10/03/26",
             sprintsLeft: "2 sprints left",
             quickLinks: [
               { label: "Workspace", path: "/projects/sphere-ai-collab" },
-              {
-                label: "Milestones",
-                path: "/projects/sphere-ai-collab",
-              },
-              {
-                label: "Meetings",
-                path: "/projects/sphere-ai-collab/meetings",
-              },
+              { label: "Milestones", path: "/projects/sphere-ai-collab" },
+              { label: "Meetings", path: "/projects/sphere-ai-collab/meetings" },
+            ],
+          },
+          {
+            id: 902,
+            title: "Startup Landing Page Revamp",
+            status: "Active",
+            deadline: "Deadline: 18/03/26",
+            sprintsLeft: "1 sprint left",
+            quickLinks: [
+              { label: "Workspace", path: "/projects/sphere-ai-collab" },
+              { label: "Milestones", path: "/projects/sphere-ai-collab" },
+              { label: "Meetings", path: "/projects/sphere-ai-collab/meetings" },
+            ],
+          },
+          {
+            id: 903,
+            title: "Creator Community Mobile App",
+            status: "Paused",
+            deadline: "Deadline: 28/03/26",
+            sprintsLeft: "3 sprints left",
+            quickLinks: [
+              { label: "Workspace", path: "/projects/sphere-ai-collab" },
+              { label: "Milestones", path: "/projects/sphere-ai-collab" },
+              { label: "Meetings", path: "/projects/sphere-ai-collab/meetings" },
             ],
           },
         ]);
@@ -172,7 +191,7 @@ export default function HomePage() {
 
           <div className="flex gap-3 overflow-x-auto pb-2">
             {activeCollabs.length === 0 ? (
-              <div className="min-w-[320px] rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 shadow-sm">
+              <div className="min-w-[230px] rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 shadow-sm">
                 <div className="font-semibold text-[var(--text-main)]">
                   No active collaborations yet
                 </div>
@@ -199,7 +218,7 @@ export default function HomePage() {
                       go(c.quickLinks[0]?.path || "/projects");
                     }
                   }}
-                  className="min-w-[320px] cursor-pointer rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 shadow-sm"
+                  className="min-w-[220px] cursor-pointer rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 shadow-sm"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
@@ -221,7 +240,7 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <div className="mt-3 flex gap-2 overflow-hidden">
                     {c.quickLinks.map((q) => (
                       <button
                         key={q.label}
@@ -229,7 +248,7 @@ export default function HomePage() {
                           event.stopPropagation();
                           go(q.path);
                         }}
-                        className="rounded-full border border-[var(--line-soft)] bg-[var(--muted)] px-3 py-1 text-[11px] font-semibold text-[var(--text-main)]"
+                        className="flex-1 whitespace-nowrap rounded-full border border-[var(--line-soft)] bg-[var(--muted)] px-1 py-1 text-[10px] font-semibold text-[var(--text-main)]"
                       >
                         {q.label}
                       </button>
@@ -258,7 +277,6 @@ export default function HomePage() {
             {mockActivity.map((p) => {
               const idx = imgIndexByPost[p.id] ?? 0;
               const total = p.images.length;
-              const progressPct = total <= 1 ? 100 : (idx / (total - 1)) * 100;
 
               return (
                 <div
@@ -299,7 +317,7 @@ export default function HomePage() {
                       <>
                         <button
                           onClick={() => prevImg(p.id, total)}
-                          className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--line-soft)] bg-[var(--surface-solid)]/90 shadow"
+                          className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--line-soft)] bg-white shadow"
                           aria-label="Previous image"
                           title="Previous"
                         >
@@ -307,7 +325,7 @@ export default function HomePage() {
                         </button>
                         <button
                           onClick={() => nextImg(p.id, total)}
-                          className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--line-soft)] bg-[var(--surface-solid)]/90 shadow"
+                          className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--line-soft)] bg-white shadow"
                           aria-label="Next image"
                           title="Next"
                         >
@@ -316,20 +334,9 @@ export default function HomePage() {
                       </>
                     )}
 
-                    <div className="absolute bottom-2 left-3 right-3">
-                      <div className="flex items-center gap-2">
-                        <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-white/70">
-                          <div
-                            className="absolute left-0 top-0 h-full bg-white"
-                            style={{ width: `${progressPct}%` }}
-                          />
-                          <div
-                            className="absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full border border-[var(--line-soft)] bg-white shadow"
-                            style={{ left: `calc(${progressPct}% - 8px)` }}
-                          />
-                        </div>
-
-                        <div className="rounded-full border border-[var(--line-soft)] bg-[var(--surface-solid)]/90 px-2 py-1 text-[11px] font-semibold text-[var(--text-main)]">
+                    <div className="absolute bottom-3 left-3 right-3">
+                      <div className="flex items-center justify-end">
+                        <div className="rounded-full border border-[var(--line-soft)] bg-white px-2 py-1 text-[11px] font-semibold text-[var(--text-main)]">
                           {idx + 1}/{total}
                         </div>
                       </div>
