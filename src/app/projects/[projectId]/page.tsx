@@ -839,11 +839,12 @@ function getNextMilestoneId() {
     );
   }
 
-  function handleAddTask(e: React.FormEvent<HTMLFormElement>) {
+function handleAddTask(e: React.FormEvent<HTMLFormElement>) {
   e.preventDefault();
 
   if (!projectState) return;
 
+  const currentProject: ProjectItem = projectState;
   const trimmedTitle = newTaskTitle.trim();
   const trimmedAssignee = newTaskAssignee.trim();
 
@@ -863,9 +864,33 @@ function getNextMilestoneId() {
   }
 
   const nextTaskId =
-    projectState.tasks.length > 0
-      ? Math.max(...projectState.tasks.map((task) => task.id)) + 1
+    currentProject.tasks.length > 0
+      ? Math.max(...currentProject.tasks.map((task) => task.id)) + 1
       : 1;
+
+  const createdTask: TaskItem = {
+    id: nextTaskId,
+    title: trimmedTitle,
+    assignee: trimmedAssignee,
+    priority: newTaskPriority,
+    status: newTaskStatus,
+    dueDate: newTaskDueDate,
+  };
+
+  const createdActivity: ActivityItem = {
+    id: getNextActivityId(),
+    text: `New task '${trimmedTitle}' created and assigned to ${trimmedAssignee}`,
+    time: formatTimeNow(),
+  };
+
+  setProjectState({
+    ...currentProject,
+    tasks: [createdTask, ...currentProject.tasks],
+    activity: [createdActivity, ...currentProject.activity],
+  });
+
+  closeAddTaskModal();
+}
 
   function handleEditTask(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -3192,4 +3217,4 @@ setProjectState({
       )}
     </main>
   );
-} }
+} 
