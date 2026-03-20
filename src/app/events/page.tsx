@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import BottomNav from "../navigation/BottomNav";
+import Header from "../navigation/Header";
 
 type EventTag =
   | "Hackathon"
@@ -113,43 +114,29 @@ function getDisplayName(): string {
 }
 
 export default function EventsPage() {
-  const router = useRouter();
   const [name, setName] = useState("User");
-
-  const [activeTab, setActiveTab] = useState<
-    "home" | "explore" | "create" | "events" | "profile"
-  >("events");
-
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<
     "all" | "free" | "paid" | "online" | "nearby"
   >("all");
-
   const [savedIds, setSavedIds] = useState<number[]>([]);
   const [registeredIds, setRegisteredIds] = useState<number[]>([]);
 
   useEffect(() => {
     setName(getDisplayName());
 
-    // saved (star)
     try {
       const raw = localStorage.getItem(SAVED_KEY);
       const parsed = raw ? JSON.parse(raw) : [];
       if (Array.isArray(parsed)) setSavedIds(parsed);
     } catch {}
 
-    // registered
     try {
       const raw = localStorage.getItem(REGISTERED_KEY);
       const parsed = raw ? JSON.parse(raw) : [];
       if (Array.isArray(parsed)) setRegisteredIds(parsed);
     } catch {}
   }, []);
-
-  const go = (path: string, tab?: typeof activeTab) => {
-    if (tab) setActiveTab(tab);
-    router.push(path);
-  };
 
   const visibleEvents = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -169,6 +156,10 @@ export default function EventsPage() {
     });
   }, [query, filter]);
 
+  const registeredEvents = useMemo(() => {
+    return mockEvents.filter((e) => registeredIds.includes(e.id));
+  }, [registeredIds]);
+
   const toggleSave = (id: number) => {
     const next = savedIds.includes(id)
       ? savedIds.filter((x) => x !== id)
@@ -187,216 +178,199 @@ export default function EventsPage() {
     localStorage.setItem(REGISTERED_KEY, JSON.stringify(next));
   };
 
-  const registeredEvents = useMemo(() => {
-    return mockEvents.filter((e) => registeredIds.includes(e.id));
-  }, [registeredIds]);
-
   return (
-    <div className="min-h-screen pb-24 bg-[#F4F6FB] text-slate-900 px-4 py-6">
-      {/* Header */}
-      <div className="mb-6 flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Events</h1>
-          <p className="text-slate-500 text-sm">
-            Discover meetups, hackathons & workshops near you, {name}
-          </p>
-        </div>
+    <div className="sync-theme-page sync-page-with-bottom-nav min-h-screen">
+      <Header
+        title="Events"
+        subtitle={`Discover meetups, hackathons, workshops, and webinars for your next move, ${name}.`}
+      />
 
-        <div className="flex items-center gap-2">
-          <button
-            aria-label="Notifications"
-            title="Notifications"
-            onClick={() => go("/notifications")}
-            className="h-10 w-10 rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition flex items-center justify-center"
-          >
-            <span className="text-lg leading-none">🔔</span>
-          </button>
-
-          <button
-            aria-label="QR"
-            title="QR"
-            onClick={() => go("/qr")}
-            className="h-10 w-10 rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition flex items-center justify-center"
-          >
-            <img
-              src="/icons/qr.png"
-              alt="QR"
-              className="h-5 w-5 object-contain"
-            />
-          </button>
-
-          <button
-            aria-label="Messages"
-            title="Messages"
-            onClick={() => go("/messages")}
-            className="h-10 w-10 rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition flex items-center justify-center"
-          >
-            <span className="text-lg leading-none">💬</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Search */}
-      <div className="mb-4">
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm px-4 py-3 flex items-center gap-3">
-          <span className="text-slate-400">🔎</span>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search events, companies, locations..."
-            className="w-full outline-none text-sm"
-          />
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
-        {[
-          { key: "all", label: "All" },
-          { key: "free", label: "Free" },
-          { key: "paid", label: "Paid" },
-          { key: "online", label: "Online" },
-          { key: "nearby", label: "Nearby" },
-        ].map((f) => (
-          <button
-            key={f.key}
-            onClick={() => setFilter(f.key as any)}
-            className={`px-4 py-2 rounded-2xl border text-sm font-semibold whitespace-nowrap ${
-              filter === f.key
-                ? "bg-[#2D6BFF] text-white border-[#2D6BFF]"
-                : "bg-white text-slate-600 border-slate-200"
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Registered Events Section */}
-      {registeredEvents.length > 0 && (
-        <section className="mb-8">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold">My Registered Events</h2>
-            <span className="text-sm text-slate-500">
-              {registeredEvents.length} registered
-            </span>
-          </div>
-
-          <div className="space-y-4">
-            {registeredEvents.map((e) => (
-              <div
-                key={`reg-${e.id}`}
-                className="rounded-2xl border border-emerald-200 bg-white p-4 shadow-sm"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-xs text-slate-500 font-semibold">
-                      {e.company}
-                    </div>
-                    <div className="text-base font-bold mt-1">{e.title}</div>
-                  </div>
-
-                  <span className="text-xs px-3 py-1 rounded-full font-semibold bg-emerald-50 text-emerald-700">
-                    Registered ✓
-                  </span>
-                </div>
-
-                <div className="mt-3 grid grid-cols-2 gap-3">
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <div className="text-xs text-slate-500">Date</div>
-                    <div className="text-sm font-semibold">{e.dateLabel}</div>
-                  </div>
-
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <div className="text-xs text-slate-500">Time</div>
-                    <div className="text-sm font-semibold">{e.timeLabel}</div>
-                  </div>
-
-                  <div className="rounded-xl bg-slate-50 p-3 col-span-2">
-                    <div className="text-xs text-slate-500">
-                      {e.mode === "Online" ? "Mode" : "Location"}
-                    </div>
-                    <div className="text-sm font-semibold">{e.location}</div>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex gap-2">
-                  <button
-                    onClick={() => alert(`Demo: open event ${e.id}`)}
-                    className="flex-1 px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold"
-                  >
-                    View
-                  </button>
-
-                  <button
-                    onClick={() => toggleRegister(e.id)}
-                    className="flex-1 px-4 py-2 rounded-xl bg-emerald-100 text-emerald-700 text-sm font-semibold"
-                  >
-                    Unregister
-                  </button>
-                </div>
+      <div className="mx-auto w-full max-w-[480px] px-4 pb-6 pt-2">
+        <div className="sync-theme-surface sync-theme-border mb-4 rounded-[28px] border px-4 py-4 shadow-sm">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <div className="sync-theme-text-main text-sm font-semibold">
+                Event Hub
               </div>
-            ))}
-          </div>
-        </section>
-      )}
+              <div className="sync-theme-text-muted mt-1 text-xs">
+                Search and manage registrations in one place
+              </div>
+            </div>
 
-      {/* Upcoming */}
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-semibold">Upcoming</h2>
-        <button
-          onClick={() => setQuery("")}
-          className="text-sm font-semibold text-[#2D6BFF]"
-        >
-          Reset
-        </button>
-      </div>
-
-      <div className="space-y-4">
-        {visibleEvents.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm text-center">
-            <div className="text-2xl">🗓️</div>
-            <div className="mt-2 font-semibold">No events found</div>
-            <div className="text-sm text-slate-500 mt-1">
-              Try changing filters or search.
+            <div className="rounded-full bg-black/[0.06] px-3 py-1 text-xs font-semibold text-black dark:bg-white/[0.08] dark:text-white">
+              {visibleEvents.length} found
             </div>
           </div>
-        ) : (
-          visibleEvents.map((e) => {
-            const saved = savedIds.includes(e.id);
-            const isRegistered = registeredIds.includes(e.id);
 
-            return (
-              <div
-                key={e.id}
-                className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+          <div className="sync-theme-border flex items-center gap-3 rounded-2xl border bg-black/[0.03] px-4 py-3 dark:bg-white/[0.04]">
+            <span className="sync-theme-text-soft text-sm">🔎</span>
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search events, companies, locations..."
+              className="sync-theme-text-main w-full bg-transparent text-sm outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500"
+            />
+          </div>
+
+          <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+            {[
+              { key: "all", label: "All" },
+              { key: "free", label: "Free" },
+              { key: "paid", label: "Paid" },
+              { key: "online", label: "Online" },
+              { key: "nearby", label: "Nearby" },
+            ].map((f) => (
+              <button
+                key={f.key}
+                onClick={() =>
+                  setFilter(
+                    f.key as "all" | "free" | "paid" | "online" | "nearby",
+                  )
+                }
+                className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition ${
+                  filter === f.key
+                    ? "sync-theme-primary-btn"
+                    : "sync-theme-border sync-theme-surface border"
+                }`}
               >
-                {/* Top row */}
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-xs text-slate-500 font-semibold">
-                      {e.company}
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {registeredEvents.length > 0 && (
+          <section className="mb-6">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="sync-theme-text-main text-lg font-semibold">
+                My Registered Events
+              </h2>
+              <span className="sync-theme-text-muted text-sm">
+                {registeredEvents.length} registered
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {registeredEvents.map((e) => (
+                <div
+                  key={`reg-${e.id}`}
+                  className="sync-theme-surface sync-theme-border rounded-[22px] border px-3 py-3 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="sync-theme-text-muted text-[11px] font-semibold">
+                        {e.company}
+                      </div>
+                      <div className="sync-theme-text-main mt-0.5 line-clamp-2 text-[14px] font-semibold leading-5">
+                        {e.title}
+                      </div>
                     </div>
-                    <div className="text-base font-bold mt-1">{e.title}</div>
+
+                    <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700">
+                      Registered
+                    </span>
                   </div>
 
-                  <div className="flex flex-col items-end gap-2">
-                    <span
-                      className={`text-xs px-3 py-1 rounded-full font-semibold ${
-                        e.priceInr === 0
-                          ? "bg-emerald-50 text-emerald-700"
-                          : "bg-slate-100 text-slate-700"
-                      }`}
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-[12px]">
+                    <div>
+                      <div className="sync-theme-text-muted text-[10px]">Date</div>
+                      <div className="sync-theme-text-main font-medium">
+                        {e.dateLabel}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="sync-theme-text-muted text-[10px]">Time</div>
+                      <div className="sync-theme-text-main font-medium">
+                        {e.timeLabel}
+                      </div>
+                    </div>
+
+                    <div className="col-span-2">
+                      <div className="sync-theme-text-muted text-[10px]">
+                        {e.mode === "Online" ? "Mode" : "Location"}
+                      </div>
+                      <div className="sync-theme-text-main font-medium">
+                        {e.location}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={() => alert(`Demo: open event ${e.id}`)}
+                      className="flex-1 rounded-xl bg-black/[0.06] py-2 text-xs font-medium text-black dark:bg-white/[0.08] dark:text-white"
                     >
-                      {formatPrice(e.priceInr)}
-                    </span>
+                      View
+                    </button>
+
+                    <button
+                      onClick={() => toggleRegister(e.id)}
+                      className="flex-1 rounded-xl bg-emerald-100 py-2 text-xs font-semibold text-emerald-700"
+                    >
+                      Unregister
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="sync-theme-text-main text-lg font-semibold">
+            Upcoming Events
+          </h2>
+
+          <button
+            onClick={() => {
+              setQuery("");
+              setFilter("all");
+            }}
+            className="sync-theme-text-main text-sm font-semibold"
+          >
+            Reset
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {visibleEvents.length === 0 ? (
+            <div className="sync-theme-surface sync-theme-border rounded-[22px] border p-6 text-center shadow-sm">
+              <div className="text-3xl">🗓️</div>
+              <div className="sync-theme-text-main mt-3 text-base font-semibold">
+                No events found
+              </div>
+              <div className="sync-theme-text-muted mt-1 text-sm">
+                Try changing your search or filters.
+              </div>
+            </div>
+          ) : (
+            visibleEvents.map((e) => {
+              const saved = savedIds.includes(e.id);
+              const isRegistered = registeredIds.includes(e.id);
+
+              return (
+                <div
+                  key={e.id}
+                  className="sync-theme-surface sync-theme-border rounded-[22px] border px-3 py-3 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="sync-theme-text-muted text-[11px] font-semibold">
+                        {e.company}
+                      </div>
+
+                      <div className="sync-theme-text-main mt-0.5 line-clamp-2 text-[14px] font-semibold leading-5">
+                        {e.title}
+                      </div>
+                    </div>
 
                     <button
                       onClick={() => toggleSave(e.id)}
-                      className={`h-9 w-9 rounded-xl border flex items-center justify-center ${
+                      className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs ${
                         saved
-                          ? "border-[#2D6BFF] bg-[#2D6BFF] text-white"
-                          : "border-slate-200 bg-white text-slate-600"
+                          ? "bg-black text-white dark:bg-white dark:text-black"
+                          : "bg-black/[0.06] text-black dark:bg-white/[0.08] dark:text-white"
                       }`}
                       title={saved ? "Saved" : "Save"}
                       aria-label={saved ? "Saved" : "Save"}
@@ -404,129 +378,74 @@ export default function EventsPage() {
                       {saved ? "★" : "☆"}
                     </button>
                   </div>
-                </div>
 
-                {/* Meta */}
-                <div className="mt-3 grid grid-cols-2 gap-3">
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <div className="text-xs text-slate-500">Date</div>
-                    <div className="text-sm font-semibold">{e.dateLabel}</div>
-                  </div>
-
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <div className="text-xs text-slate-500">Time</div>
-                    <div className="text-sm font-semibold">{e.timeLabel}</div>
-                  </div>
-
-                  <div className="rounded-xl bg-slate-50 p-3 col-span-2">
-                    <div className="text-xs text-slate-500">
-                      {e.mode === "Online" ? "Mode" : "Location"}
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-[12px]">
+                    <div>
+                      <div className="sync-theme-text-muted text-[10px]">Date</div>
+                      <div className="sync-theme-text-main font-medium">
+                        {e.dateLabel}
+                      </div>
                     </div>
-                    <div className="text-sm font-semibold">{e.location}</div>
+
+                    <div>
+                      <div className="sync-theme-text-muted text-[10px]">Time</div>
+                      <div className="sync-theme-text-main font-medium">
+                        {e.timeLabel}
+                      </div>
+                    </div>
+
+                    <div className="col-span-2">
+                      <div className="sync-theme-text-muted text-[10px]">
+                        {e.mode === "Online" ? "Mode" : "Location"}
+                      </div>
+                      <div className="sync-theme-text-main font-medium">
+                        {e.location}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <span className="rounded-full bg-black/[0.06] px-2 py-[2px] text-[10px] text-black dark:bg-white/[0.08] dark:text-white">
+                      {e.mode}
+                    </span>
+
+                    {e.tags.map((t) => (
+                      <span
+                        key={t}
+                        className="rounded-full bg-black/[0.06] px-2 py-[2px] text-[10px] text-black dark:bg-white/[0.08] dark:text-white"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={() => alert(`Demo: open event ${e.id}`)}
+                      className="flex-1 rounded-xl bg-black/[0.06] py-2 text-xs font-medium text-black dark:bg-white/[0.08] dark:text-white"
+                    >
+                      View
+                    </button>
+
+                    <button
+                      onClick={() => toggleRegister(e.id)}
+                      className={`flex-1 rounded-xl py-2 text-xs font-semibold ${
+                        isRegistered
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-black text-white dark:bg-white dark:text-black"
+                      }`}
+                    >
+                      {isRegistered ? "Registered" : "Register"}
+                    </button>
                   </div>
                 </div>
-
-                {/* Tags */}
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <span className="text-xs px-2 py-1 rounded-full bg-slate-100">
-                    {e.mode}
-                  </span>
-                  {e.tags.map((t) => (
-                    <span
-                      key={t}
-                      className="text-xs px-2 py-1 rounded-full bg-slate-100"
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-
-                {/* Actions */}
-                <div className="mt-4 flex gap-2">
-                  <button
-                    onClick={() => alert(`Demo: open event ${e.id}`)}
-                    className="flex-1 px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold"
-                  >
-                    View
-                  </button>
-
-                  <button
-                    onClick={() => toggleRegister(e.id)}
-                    className={`flex-1 px-4 py-2 rounded-xl text-sm font-semibold ${
-                      isRegistered
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "bg-[#2D6BFF] text-white"
-                    }`}
-                  >
-                    {isRegistered ? "Registered ✓" : "Register"}
-                  </button>
-                </div>
-              </div>
-            );
-          })
-        )}
+              );
+            })
+          )}
+        </div>
       </div>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 h-16 z-40">
-        <div className="h-full grid grid-cols-5">
-          <button
-            onClick={() => go("/home", "home")}
-            className={`flex flex-col items-center justify-center gap-1 text-[11px] ${
-              activeTab === "home"
-                ? "text-[#2D6BFF] font-semibold"
-                : "text-slate-500"
-            }`}
-          >
-            <span className="text-lg leading-none">🏠</span>
-            <span>Home</span>
-          </button>
-
-          <button
-            onClick={() => go("/explore", "explore")}
-            className={`flex flex-col items-center justify-center gap-1 text-[11px] ${
-              activeTab === "explore"
-                ? "text-[#2D6BFF] font-semibold"
-                : "text-slate-500"
-            }`}
-          >
-            <span className="text-lg leading-none">🧭</span>
-            <span>Explore</span>
-          </button>
-
-          <button
-            onClick={() => go("/create", "create")}
-            className="flex flex-col items-center justify-center gap-1 text-[11px]"
-          >
-            <span className="text-lg leading-none">➕</span>
-            <span className="text-slate-700 font-semibold">Create</span>
-          </button>
-
-          <button
-            onClick={() => go("/events", "events")}
-            className={`flex flex-col items-center justify-center gap-1 text-[11px] ${
-              activeTab === "events"
-                ? "text-[#2D6BFF] font-semibold"
-                : "text-slate-500"
-            }`}
-          >
-            <span className="text-lg leading-none">📅</span>
-            <span>Events</span>
-          </button>
-
-          <button
-            onClick={() => go("/profile", "profile")}
-            className={`flex flex-col items-center justify-center gap-1 text-[11px] ${
-              activeTab === "profile"
-                ? "text-[#2D6BFF] font-semibold"
-                : "text-slate-500"
-            }`}
-          >
-            <span className="text-lg leading-none">👤</span>
-            <span>Profile</span>
-          </button>
-        </div>
-      </nav>
+      <BottomNav />
     </div>
   );
 }
