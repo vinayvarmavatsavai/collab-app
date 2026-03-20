@@ -2,20 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  APPLIED_REQUESTS_KEY,
-  MY_REQUESTS_KEY,
-  SAVED_REQUESTS_KEY,
-  addRequestApplicant,
-  getAppliedRequestIds,
-  getMyRequests,
-  getProfileDisplayName,
-  getProfileRoleLabel,
-  removeRequestApplicant,
-  saveAppliedRequestIds,
-  saveSavedRequestIds,
-  type CollaborationPost,
-} from "@/lib/collaboration";
+import { apiFetch } from "@/lib/api";
+
 type FooterTab = "home" | "explore" | "create" | "events" | "profile";
 
 type ExploreView =
@@ -25,65 +13,84 @@ type ExploreView =
   | "interests"
   | "startup-spotlight";
 
+type ProjectVisibilityMode = "matching-only" | "open" | "hybrid";
 
+type ExperienceLevel = "junior" | "mid" | "senior" | "any";
 
-const mockAllRequests: CollaborationPost[] = [
-  {
-    id: 201,
-    title: "Robotics Sensor Fusion Prototype",
-    by: "Sanjay",
-    role: "Research Student",
-    skills: ["Robotics", "Python", "ROS"],
-    type: "Public",
-    mode: "In-person",
-    hours: "6-10 hrs/week",
-    interestTags: ["robotics", "ai"],
-  },
-  {
-    id: 202,
-    title: "Build AI Resume Analyzer",
-    by: "Rahul",
-    role: "Startup Founder",
-    skills: ["React", "Node.js", "AI"],
-    type: "Public",
-    mode: "Online",
-    hours: "5-8 hrs/week",
-    interestTags: ["data-science", "ai", "web-dev"],
-  },
-  {
-    id: 203,
-    title: "Data Science — Churn Prediction",
-    by: "Meghana",
-    role: "Student",
-    skills: ["Python", "Pandas", "ML"],
-    type: "Public",
-    mode: "Online",
-    hours: "4-6 hrs/week",
-    interestTags: ["data-science", "ai"],
-  },
-  {
-    id: 204,
-    title: "Startup Landing Page UI Revamp",
-    by: "Ayesha",
-    role: "Designer",
-    skills: ["UI/UX", "Figma"],
-    type: "Public",
-    mode: "Online",
-    hours: "3-5 hrs/week",
-    interestTags: ["design", "web-dev"],
-  },
-  {
-    id: 205,
-    title: "Mobile App Backend APIs",
-    by: "Kiran",
-    role: "Freelancer",
-    skills: ["Next.js", "MongoDB"],
-    type: "Public",
-    mode: "Online",
-    hours: "6-10 hrs/week",
-    interestTags: ["web-dev"],
-  },
-];
+type Creator = {
+  id?: string;
+  firstname?: string;
+  lastname?: string;
+  headline?: string;
+  bio?: string;
+  profilePicture?: string;
+  currentCompany?: string;
+  currentPosition?: string;
+};
+
+type BackendProject = {
+  id: string;
+  title: string;
+  description: string;
+  requiredSkills: string[];
+  requiredDomains: string[];
+  optionalSkills?: string[];
+  preferredExperienceLevel?: ExperienceLevel;
+  maxCohortSize: number;
+  status: string;
+  visibilityMode: ProjectVisibilityMode;
+  matchingScope?: "GLOBAL" | "COMMUNITY" | "CLUB";
+  createdAt: string;
+  updatedAt: string;
+  creator?: Creator;
+};
+
+type ProjectsListResponse = {
+  projects: BackendProject[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
+type MyInterestProject = {
+  id: string;
+  title: string;
+  description: string;
+  requiredSkills?: string[];
+  requiredDomains?: string[];
+  visibilityMode?: ProjectVisibilityMode;
+  creator?: Creator;
+};
+
+type BackendInterest = {
+  id: string;
+  projectId: string;
+  userId: string;
+  interestText: string;
+  createdAt: string;
+  project?: MyInterestProject;
+};
+
+type ExploreCard = {
+  id: string;
+  title: string;
+  by: string;
+  role: string;
+  skills: string[];
+  domains: string[];
+  type: string;
+  mode: string;
+  hours: string;
+  interestTags: string[];
+  description: string;
+  visibilityMode: ProjectVisibilityMode;
+  preferredExperienceLevel?: ExperienceLevel;
+  maxCohortSize: number;
+  status: string;
+  createdAt?: string;
+};
+
+const SAVED_REQUESTS_KEY = "saved_request_ids_v2";
 
 const INTERESTS = [
   { key: "robotics", label: "Robotics", emoji: "🤖" },
@@ -93,9 +100,7 @@ const INTERESTS = [
   { key: "ai", label: "AI", emoji: "🧠" },
 ];
 
-
-
-function getDisplayName(): string {
+function getDisplayNameFromLocalProfile(): string {
   try {
     const raw = localStorage.getItem("profileAnswers");
     if (!raw) return "User";
@@ -107,11 +112,144 @@ function getDisplayName(): string {
       parsed?.["Your name"],
       parsed?.["Name"],
     ].filter(Boolean);
-    const n = (candidates?.[0] ?? "User") as string;
-    return n.trim() || "User";
+
+    const value = (candidates?.[0] ?? "User") as string;
+    return value.trim() || "User";
   } catch {
     return "User";
   }
+}
+
+function getSavedRequestIds(): string[] {
+  try {
+    const raw = localStorage.getItem(SAVED_REQUESTS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveSavedRequestIds(ids: string[]) {
+  localStorage.setItem(SAVED_REQUESTS_KEY, JSON.stringify(ids));
+}
+
+function getCreatorName(creator?: Creator): string {
+  const fullName = [creator?.firstname, creator?.lastname]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
+  if (fullName) return fullName;
+  if (creator?.currentCompany) return creator.currentCompany;
+  return "Unknown user";
+}
+
+function getCreatorRole(creator?: Creator): string {
+  return (
+    creator?.headline ||
+    creator?.currentPosition ||
+    creator?.currentCompany ||
+    "Collaborator"
+  );
+}
+
+function getInterestTagsFromProject(project: BackendProject): string[] {
+  const source = [
+    ...(project.requiredSkills || []),
+    ...(project.requiredDomains || []),
+    ...(project.optionalSkills || []),
+    project.title,
+    project.description,
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  const tags: string[] = [];
+
+  if (
+    source.includes("robot") ||
+    source.includes("ros") ||
+    source.includes("sensor")
+  ) {
+    tags.push("robotics");
+  }
+
+  if (
+    source.includes("data") ||
+    source.includes("analytics") ||
+    source.includes("machine learning") ||
+    source.includes("ml") ||
+    source.includes("python") ||
+    source.includes("ai")
+  ) {
+    tags.push("data-science");
+  }
+
+  if (
+    source.includes("react") ||
+    source.includes("node") ||
+    source.includes("web") ||
+    source.includes("frontend") ||
+    source.includes("backend") ||
+    source.includes("next")
+  ) {
+    tags.push("web-dev");
+  }
+
+  if (
+    source.includes("design") ||
+    source.includes("ui") ||
+    source.includes("ux") ||
+    source.includes("figma")
+  ) {
+    tags.push("design");
+  }
+
+  if (source.includes("ai") || source.includes("llm")) {
+    tags.push("ai");
+  }
+
+  return tags.length > 0 ? [...new Set(tags)] : ["web-dev"];
+}
+
+function mapVisibilityModeToLabel(mode: ProjectVisibilityMode): string {
+  if (mode === "matching-only") return "Invite Only";
+  if (mode === "hybrid") return "Public + Matched";
+  return "Public";
+}
+
+function mapExperienceToHours(level?: ExperienceLevel): string {
+  if (level === "junior") return "4-8 hrs/week";
+  if (level === "mid") return "6-10 hrs/week";
+  if (level === "senior") return "8-12 hrs/week";
+  return "Flexible";
+}
+
+function mapProjectToCard(project: BackendProject): ExploreCard {
+  return {
+    id: project.id,
+    title: project.title,
+    by: getCreatorName(project.creator),
+    role: getCreatorRole(project.creator),
+    skills: project.requiredSkills || [],
+    domains: project.requiredDomains || [],
+    type: mapVisibilityModeToLabel(project.visibilityMode),
+    mode:
+      project.matchingScope === "COMMUNITY"
+        ? "Community"
+        : project.matchingScope === "CLUB"
+          ? "Club"
+          : "Global",
+    hours: mapExperienceToHours(project.preferredExperienceLevel),
+    interestTags: getInterestTagsFromProject(project),
+    description: project.description,
+    visibilityMode: project.visibilityMode,
+    preferredExperienceLevel: project.preferredExperienceLevel,
+    maxCohortSize: project.maxCohortSize,
+    status: project.status,
+    createdAt: project.createdAt,
+  };
 }
 
 export default function ExplorePage() {
@@ -119,85 +257,100 @@ export default function ExplorePage() {
 
   const [name, setName] = useState("User");
   const [footerTab, setFooterTab] = useState<FooterTab>("explore");
-
   const [view, setView] = useState<ExploreView>("recommended");
   const [activeInterest, setActiveInterest] = useState<string | null>(null);
-
   const [query, setQuery] = useState("");
-  const [savedIds, setSavedIds] = useState<number[]>([]);
-  const [appliedIds, setAppliedIds] = useState<number[]>([]);
-  const [myRequests, setMyRequests] = useState<CollaborationPost[]>([]);
+
+  const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [appliedProjectIds, setAppliedProjectIds] = useState<string[]>([]);
+
+  const [projects, setProjects] = useState<BackendProject[]>([]);
+  const [myProjects, setMyProjects] = useState<BackendProject[]>([]);
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [pageError, setPageError] = useState("");
+
+  const [applyingProjectId, setApplyingProjectId] = useState<string | null>(null);
 
   useEffect(() => {
-  setName(getDisplayName());
+    setName(getDisplayNameFromLocalProfile());
+    setSavedIds(getSavedRequestIds());
+    void loadExploreData();
+  }, []);
 
-  try {
-    const raw = localStorage.getItem(SAVED_REQUESTS_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    if (Array.isArray(parsed)) setSavedIds(parsed);
-  } catch {}
+  async function loadExploreData() {
+    setIsLoading(true);
+    setPageError("");
 
-  try {
-    setAppliedIds(getAppliedRequestIds());
-  } catch {
-    setAppliedIds([]);
+    try {
+      const [projectsResponse, myProjectsResponse, myInterestsResponse] =
+        await Promise.all([
+          apiFetch<ProjectsListResponse>("/projects"),
+          apiFetch<BackendProject[]>("/projects/my-requests"),
+          apiFetch<BackendInterest[]>("/project-interests/me"),
+        ]);
+
+      setProjects(projectsResponse.projects || []);
+      setMyProjects(myProjectsResponse || []);
+      setAppliedProjectIds(
+        (myInterestsResponse || []).map((interest) => String(interest.projectId)),
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to load explore data";
+
+      setPageError(message);
+
+      if (message === "Unauthorized") {
+        router.push("/signup");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   }
-
-  try {
-    setMyRequests(getMyRequests());
-  } catch {
-    setMyRequests([]);
-  }
-}, []);
 
   const go = (path: string, ftab?: FooterTab) => {
     if (ftab) setFooterTab(ftab);
     router.push(path);
   };
 
- const toggleSave = (id: number) => {
-  const next = savedIds.includes(id)
-    ? savedIds.filter((x) => x !== id)
-    : [...savedIds, id];
+  const toggleSave = (id: string) => {
+    const next = savedIds.includes(id)
+      ? savedIds.filter((x) => x !== id)
+      : [...savedIds, id];
 
-  setSavedIds(next);
-  saveSavedRequestIds(next);
-};
+    setSavedIds(next);
+    saveSavedRequestIds(next);
+  };
 
-const toggleApply = (id: number) => {
-  const next = appliedIds.includes(id)
-    ? appliedIds.filter((x) => x !== id)
-    : [...appliedIds, id];
+  const openApply = (projectId: string) => {
+    router.push(`/explore/${projectId}`);
+  };
 
-  setAppliedIds(next);
-  saveAppliedRequestIds(next);
+  const allCards = useMemo(() => {
+    const myIds = new Set(myProjects.map((project) => project.id));
 
-  if (appliedIds.includes(id)) {
-    removeRequestApplicant(id, getProfileDisplayName());
-  } else {
-    addRequestApplicant({
-      requestId: id,
-      applicantName: getProfileDisplayName(),
-      applicantRole: getProfileRoleLabel(),
-    });
-  }
-};
-const allRequests = useMemo(() => {
-  const mine = [...myRequests];
-  const others = mockAllRequests.filter(
-    (mock) => !mine.some((item) => item.id === mock.id),
-  );
+    const combined = [
+      ...myProjects.map(mapProjectToCard),
+      ...projects
+        .filter((project) => !myIds.has(project.id))
+        .map(mapProjectToCard),
+    ];
 
-  return [...mine, ...others];
-}, [myRequests]);
+    return combined;
+  }, [projects, myProjects]);
 
- const baseList = useMemo(() => {
-  if (view === "startup-spotlight") return [];
-  if (view === "recommended") return allRequests.slice(0, 3);
-  if (view === "requests") return allRequests;
-  if (view === "my-requests") return myRequests;
-  return allRequests;
-}, [view, myRequests, allRequests]);
+  const myRequestCards = useMemo(() => {
+    return myProjects.map(mapProjectToCard);
+  }, [myProjects]);
+
+  const baseList = useMemo(() => {
+    if (view === "startup-spotlight") return [] as ExploreCard[];
+    if (view === "recommended") return allCards.slice(0, 3);
+    if (view === "requests") return allCards;
+    if (view === "my-requests") return myRequestCards;
+    return allCards;
+  }, [view, allCards, myRequestCards]);
 
   const visible = useMemo(() => {
     let list = baseList;
@@ -206,13 +359,25 @@ const allRequests = useMemo(() => {
       list = list.filter((p) => p.interestTags.includes(activeInterest));
     }
 
-    const q = query.trim().toLowerCase();
-    if (!q) return list;
+    const search = query.trim().toLowerCase();
+    if (!search) return list;
 
     return list.filter((p) => {
-      const hay =
-        `${p.title} ${p.by} ${p.role} ${p.skills.join(" ")} ${p.mode} ${p.type} ${p.hours}`.toLowerCase();
-      return hay.includes(q);
+      const haystack = [
+        p.title,
+        p.by,
+        p.role,
+        p.skills.join(" "),
+        p.domains.join(" "),
+        p.mode,
+        p.type,
+        p.hours,
+        p.description,
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return haystack.includes(search);
     });
   }, [baseList, query, view, activeInterest]);
 
@@ -222,7 +387,10 @@ const allRequests = useMemo(() => {
     if (view === "requests") return "All Requests";
     if (view === "my-requests") return "My Requests";
     return activeInterest
-      ? `Interest: ${INTERESTS.find((x) => x.key === activeInterest)?.label ?? activeInterest}`
+      ? `Interest: ${
+          INTERESTS.find((item) => item.key === activeInterest)?.label ||
+          activeInterest
+        }`
       : "Pick an Interest";
   }, [view, activeInterest]);
 
@@ -242,7 +410,7 @@ const allRequests = useMemo(() => {
     return (
       <button
         onClick={onClick}
-        className={`min-w-[220px] rounded-2xl border p-4 shadow-sm text-left transition ${
+        className={`min-w-[220px] rounded-2xl border p-4 text-left shadow-sm transition ${
           isActive
             ? "border-[#2D6BFF] bg-white"
             : "border-slate-200 bg-white hover:shadow-md"
@@ -250,136 +418,96 @@ const allRequests = useMemo(() => {
       >
         <div className="text-2xl">{emoji}</div>
         <div className="mt-2 font-bold">{title}</div>
-        <div className="text-xs text-slate-500 mt-1">{subtitle}</div>
+        <div className="mt-1 text-xs text-slate-500">{subtitle}</div>
       </button>
     );
   };
 
   const renderStartupSpotlight = () => {
     const tags = ["Collaboration", "Startups", "Universities", "Mobile-first"];
-    const stack = ["Next.js", "Tailwind", "Node/Nest (API)", "Postgres/Mongo (later)"];
+    const stack = [
+      "Next.js",
+      "Tailwind",
+      "NestJS API",
+      "PostgreSQL",
+      "AI Matching",
+    ];
 
     return (
       <div className="space-y-4">
-        {/* Main spotlight card */}
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="h-12 w-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center font-extrabold text-slate-700">
-                S
-              </div>
-
-              <div className="min-w-0">
-                <div className="text-base font-extrabold truncate">SphereNet</div>
-                <div className="text-xs text-slate-500 mt-1">
-                  Startup × University Collaboration Platform
-                </div>
+            <div className="min-w-0">
+              <div className="text-base font-extrabold">SphereNet</div>
+              <div className="mt-1 text-xs text-slate-500">
+                Startup × Student Collaboration Platform
               </div>
             </div>
 
-            <span className="shrink-0 inline-flex items-center justify-center h-8 px-3 rounded-full bg-emerald-50 text-emerald-700 font-semibold border border-emerald-100 text-[11px] leading-none">
-  This week
-</span>
+            <span className="inline-flex h-8 shrink-0 items-center justify-center rounded-full border border-emerald-100 bg-emerald-50 px-3 text-[11px] font-semibold leading-none text-emerald-700">
+              This week
+            </span>
           </div>
 
-          {/* short description */}
           <p className="mt-3 text-sm text-slate-600">
-            SphereNet helps startups and students collaborate through skill-based matching,
-            project requests, milestones, and verified profiles — built mobile-first.
+            SphereNet helps startups and collaborators discover each other,
+            apply to real opportunities, and form smart collaboration cohorts.
           </p>
 
-          {/* tags */}
           <div className="mt-3 flex flex-wrap gap-2">
-            {tags.map((t) => (
+            {tags.map((tag) => (
               <span
-                key={t}
-                className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600"
+                key={tag}
+                className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600"
               >
-                {t}
+                {tag}
               </span>
             ))}
           </div>
 
-          {/* what’s included */}
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div className="rounded-2xl border border-slate-200 bg-white p-3">
               <div className="text-xs text-slate-500">Focus</div>
               <div className="mt-1 text-sm font-semibold">
-                Projects • Requests • Cohorts
+                Requests • Applicants • Cohorts
               </div>
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white p-3">
-              <div className="text-xs text-slate-500">Weekly Podcast</div>
+              <div className="text-xs text-slate-500">Matching</div>
               <div className="mt-1 text-sm font-semibold">
-                Founder story + product demo
+                AI relevance-based ranking
               </div>
             </div>
           </div>
 
-          {/* stack */}
           <div className="mt-4">
             <div className="text-sm font-semibold">Tech Stack</div>
             <div className="mt-2 flex flex-wrap gap-2">
-              {stack.map((s) => (
+              {stack.map((item) => (
                 <span
-                  key={s}
-                  className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-700"
+                  key={item}
+                  className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-700"
                 >
-                  {s}
+                  {item}
                 </span>
               ))}
             </div>
           </div>
 
-          {/* actions */}
           <div className="mt-4 flex gap-2">
             <button
               onClick={() => go("/home", "home")}
-              className="flex-1 px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold"
+              className="flex-1 rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700"
             >
               View in Home
             </button>
 
             <button
               onClick={() => go("/create", "create")}
-              className="flex-1 px-4 py-2 rounded-xl bg-[#2D6BFF] text-white text-sm font-semibold"
+              className="flex-1 rounded-xl bg-[#2D6BFF] px-4 py-2 text-sm font-semibold text-white"
             >
               Create a Request
-            </button>
-          </div>
-        </div>
-
-        {/* Podcast card */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="font-bold">Podcast</div>
-            <span className="text-xs text-slate-500">Episode #01 (demo)</span>
-          </div>
-
-          <div className="mt-2 text-sm text-slate-600">
-            “Building SphereNet: matching students to real startup work”
-          </div>
-
-          <div className="mt-3 flex items-center gap-2">
-            <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
-              <div className="h-full bg-slate-300 w-[35%]" />
-            </div>
-            <div className="text-xs text-slate-500">3:12</div>
-          </div>
-
-          <div className="mt-3 flex gap-2">
-            <button
-              onClick={() => alert("Demo: play podcast")}
-              className="px-4 py-2 rounded-xl bg-[#2D6BFF] text-white text-sm font-semibold"
-            >
-              ▶ Play
-            </button>
-            <button
-              onClick={() => alert("Demo: open details")}
-              className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold"
-            >
-              Details
             </button>
           </div>
         </div>
@@ -387,26 +515,27 @@ const allRequests = useMemo(() => {
     );
   };
 
-  const renderCard = (p: CollaborationPost) => {
-    const saved = savedIds.includes(p.id);
-    const applied = appliedIds.includes(p.id);
+  const renderCard = (project: ExploreCard) => {
+    const saved = savedIds.includes(project.id);
+    const applied = appliedProjectIds.includes(project.id);
+    const isMine = myRequestCards.some((item) => item.id === project.id);
 
     return (
       <div
-        key={p.id}
+        key={project.id}
         className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-base font-bold">{p.title}</div>
-            <div className="text-xs text-slate-500 mt-1">
-              {p.by} • {p.role}
+            <div className="text-base font-bold">{project.title}</div>
+            <div className="mt-1 text-xs text-slate-500">
+              {project.by} • {project.role}
             </div>
           </div>
 
           <button
-            onClick={() => toggleSave(p.id)}
-            className={`h-9 w-9 rounded-xl border flex items-center justify-center ${
+            onClick={() => toggleSave(project.id)}
+            className={`flex h-9 w-9 items-center justify-center rounded-xl border ${
               saved
                 ? "border-[#2D6BFF] bg-[#2D6BFF] text-white"
                 : "border-slate-200 bg-white text-slate-600"
@@ -419,45 +548,76 @@ const allRequests = useMemo(() => {
         </div>
 
         <div className="mt-3 flex flex-wrap gap-2">
-          <span className="text-xs px-2 py-1 rounded-full bg-slate-100">
-            {p.type}
+          <span className="rounded-full bg-slate-100 px-2 py-1 text-xs">
+            {project.type}
           </span>
-          <span className="text-xs px-2 py-1 rounded-full bg-slate-100">
-            {p.mode}
+          <span className="rounded-full bg-slate-100 px-2 py-1 text-xs">
+            {project.mode}
           </span>
-          <span className="text-xs px-2 py-1 rounded-full bg-slate-100">
-            {p.hours}
+          <span className="rounded-full bg-slate-100 px-2 py-1 text-xs">
+            {project.hours}
+          </span>
+          <span className="rounded-full bg-slate-100 px-2 py-1 text-xs">
+            Cohort {project.maxCohortSize}
           </span>
         </div>
 
+        {project.description ? (
+          <p className="mt-3 line-clamp-2 text-sm text-slate-600">
+            {project.description}
+          </p>
+        ) : null}
+
         <div className="mt-3 flex flex-wrap gap-2">
-          {p.skills.map((s) => (
+          {project.skills.map((skill) => (
             <span
-              key={s}
-              className="text-xs px-2 py-1 rounded-full bg-slate-100"
+              key={skill}
+              className="rounded-full bg-slate-100 px-2 py-1 text-xs"
             >
-              {s}
+              {skill}
             </span>
           ))}
         </div>
 
+        {project.domains.length > 0 ? (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {project.domains.map((domain) => (
+              <span
+                key={domain}
+                className="rounded-full bg-blue-50 px-2 py-1 text-xs text-blue-700"
+              >
+                {domain}
+              </span>
+            ))}
+          </div>
+        ) : null}
+
         <div className="mt-4 flex gap-2">
           <button
-  onClick={() => router.push(`/explore/${p.id}`)}
-  className="flex-1 rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700"
->
-  View
-</button>
+            onClick={() => router.push(`/explore/${project.id}`)}
+            className="flex-1 rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700"
+          >
+            View
+          </button>
 
           <button
-            onClick={() => toggleApply(p.id)}
-            className={`flex-1 px-4 py-2 rounded-xl text-sm font-semibold ${
-              applied
-                ? "bg-emerald-100 text-emerald-700"
-                : "bg-[#2D6BFF] text-white"
+            onClick={() => openApply(project.id)}
+            disabled={isMine || applied || applyingProjectId === project.id}
+            className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold ${
+              isMine
+                ? "bg-slate-200 text-slate-500"
+                : applied
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-[#2D6BFF] text-white"
             }`}
           >
-            {applied ? "Applied ✓" : "Apply"}
+            {isMine
+              ? "Your Request"
+              : applied
+                ? "Applied ✓"
+                : applyingProjectId === project.id
+                  ? "Opening..."
+                  : "Apply"}
           </button>
         </div>
       </div>
@@ -465,12 +625,11 @@ const allRequests = useMemo(() => {
   };
 
   return (
-    <div className="min-h-screen pb-24 bg-[#F4F6FB] text-slate-900 px-4 py-6">
-      {/* Header */}
+    <div className="min-h-screen bg-[#F4F6FB] px-4 py-6 pb-24 text-slate-900">
       <div className="mb-6 flex items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Explore</h1>
-          <p className="text-slate-500 text-sm">
+          <p className="text-sm text-slate-500">
             Discover collaborations, {name}
           </p>
         </div>
@@ -480,7 +639,7 @@ const allRequests = useMemo(() => {
             aria-label="Notifications"
             title="Notifications"
             onClick={() => go("/notifications")}
-            className="h-10 w-10 rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition flex items-center justify-center"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
           >
             <span className="text-lg leading-none">🔔</span>
           </button>
@@ -489,7 +648,7 @@ const allRequests = useMemo(() => {
             aria-label="QR"
             title="QR"
             onClick={() => go("/qr")}
-            className="h-10 w-10 rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition flex items-center justify-center"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
           >
             <img
               src="/icons/qr.png"
@@ -502,16 +661,15 @@ const allRequests = useMemo(() => {
             aria-label="Messages"
             title="Messages"
             onClick={() => go("/messages")}
-            className="h-10 w-10 rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition flex items-center justify-center"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
           >
             <span className="text-lg leading-none">💬</span>
           </button>
         </div>
       </div>
 
-      {/* Explore Sections */}
       <section className="mb-6">
-        <div className="flex items-center justify-between mb-3">
+        <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-semibold">Explore Sections</h2>
           <button
             onClick={() => {
@@ -528,7 +686,7 @@ const allRequests = useMemo(() => {
         <div className="flex gap-3 overflow-x-auto pb-2">
           <SectionButton
             title="Recommended"
-            subtitle="AI-matched suggestions (demo)"
+            subtitle="Smart picks from live requests"
             emoji="✨"
             isActive={view === "recommended"}
             onClick={() => {
@@ -540,7 +698,7 @@ const allRequests = useMemo(() => {
 
           <SectionButton
             title="Requests"
-            subtitle="Browse all public requests"
+            subtitle="Browse all collaboration requests"
             emoji="📌"
             isActive={view === "requests"}
             onClick={() => {
@@ -550,10 +708,9 @@ const allRequests = useMemo(() => {
             }}
           />
 
-          {/* ✅ NEW: Startup Spotlight */}
           <SectionButton
             title="Startup Spotlight"
-            subtitle="Weekly startup podcast + details"
+            subtitle="Platform story + ecosystem"
             emoji="🎙️"
             isActive={view === "startup-spotlight"}
             onClick={() => {
@@ -577,7 +734,7 @@ const allRequests = useMemo(() => {
 
           <SectionButton
             title="Interests"
-            subtitle="Robotics, Data Science, Web…"
+            subtitle="Filter by category"
             emoji="🧠"
             isActive={view === "interests"}
             onClick={() => {
@@ -589,15 +746,13 @@ const allRequests = useMemo(() => {
         </div>
       </section>
 
-      {/* Spotlight view */}
       {view === "startup-spotlight" && (
         <section className="mb-6">{renderStartupSpotlight()}</section>
       )}
 
-      {/* Interests tiles */}
       {view === "interests" && (
         <section className="mb-6">
-          <div className="flex items-center justify-between mb-3">
+          <div className="mb-3 flex items-center justify-between">
             <h2 className="text-lg font-semibold">Choose an Interest</h2>
             {activeInterest && (
               <button
@@ -610,22 +765,23 @@ const allRequests = useMemo(() => {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            {INTERESTS.map((i) => {
-              const active = activeInterest === i.key;
+            {INTERESTS.map((interest) => {
+              const active = activeInterest === interest.key;
+
               return (
                 <button
-                  key={i.key}
-                  onClick={() => setActiveInterest(i.key)}
-                  className={`rounded-2xl border bg-white p-4 shadow-sm text-left transition ${
+                  key={interest.key}
+                  onClick={() => setActiveInterest(interest.key)}
+                  className={`rounded-2xl border bg-white p-4 text-left shadow-sm transition ${
                     active
                       ? "border-[#2D6BFF]"
                       : "border-slate-200 hover:shadow-md"
                   }`}
                 >
-                  <div className="text-2xl">{i.emoji}</div>
-                  <div className="mt-2 font-bold">{i.label}</div>
-                  <div className="text-xs text-slate-500 mt-1">
-                    Tap to filter posts
+                  <div className="text-2xl">{interest.emoji}</div>
+                  <div className="mt-2 font-bold">{interest.label}</div>
+                  <div className="mt-1 text-xs text-slate-500">
+                    Tap to filter requests
                   </div>
                 </button>
               );
@@ -634,36 +790,54 @@ const allRequests = useMemo(() => {
         </section>
       )}
 
-      {/* Search (hide for spotlight) */}
       {view !== "startup-spotlight" && (
         <div className="mb-6">
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm px-4 py-3 flex items-center gap-3">
+          <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
             <span className="text-slate-400">🔎</span>
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search title, skills, people..."
-              className="w-full outline-none text-sm"
+              placeholder="Search title, skills, domains, people..."
+              className="w-full text-sm outline-none"
             />
           </div>
         </div>
       )}
 
-      {/* Title + List (hide list for spotlight) */}
-      {view !== "startup-spotlight" && (
+      {pageError ? (
+        <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {pageError}
+        </div>
+      ) : null}
+
+      {isLoading ? (
+        <section className="space-y-4">
+          {[1, 2, 3].map((item) => (
+            <div
+              key={item}
+              className="animate-pulse rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+            >
+              <div className="h-5 w-2/3 rounded bg-slate-200" />
+              <div className="mt-3 h-4 w-1/3 rounded bg-slate-200" />
+              <div className="mt-4 h-4 w-full rounded bg-slate-200" />
+              <div className="mt-2 h-4 w-5/6 rounded bg-slate-200" />
+            </div>
+          ))}
+        </section>
+      ) : view !== "startup-spotlight" ? (
         <>
-          <div className="flex items-center justify-between mb-3">
+          <div className="mb-3 flex items-center justify-between">
             <h2 className="text-lg font-semibold">{sectionTitle}</h2>
             <span className="text-sm text-slate-500">{visible.length} items</span>
           </div>
 
           <section className="space-y-4">
             {visible.length === 0 ? (
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm text-center">
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
                 <div className="text-2xl">🧭</div>
                 <div className="mt-2 font-semibold">Nothing found</div>
-                <div className="text-sm text-slate-500 mt-1">
-                  Try a different search.
+                <div className="mt-1 text-sm text-slate-500">
+                  Try a different filter or search.
                 </div>
               </div>
             ) : (
@@ -671,16 +845,15 @@ const allRequests = useMemo(() => {
             )}
           </section>
         </>
-      )}
+      ) : null}
 
-      {/* Footer */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 h-16 z-40">
-        <div className="h-full grid grid-cols-5">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 h-16 border-t border-slate-200 bg-white">
+        <div className="grid h-full grid-cols-5">
           <button
             onClick={() => go("/home", "home")}
             className={`flex flex-col items-center justify-center gap-1 text-[11px] ${
               footerTab === "home"
-                ? "text-[#2D6BFF] font-semibold"
+                ? "font-semibold text-[#2D6BFF]"
                 : "text-slate-500"
             }`}
           >
@@ -692,7 +865,7 @@ const allRequests = useMemo(() => {
             onClick={() => go("/explore", "explore")}
             className={`flex flex-col items-center justify-center gap-1 text-[11px] ${
               footerTab === "explore"
-                ? "text-[#2D6BFF] font-semibold"
+                ? "font-semibold text-[#2D6BFF]"
                 : "text-slate-500"
             }`}
           >
@@ -705,14 +878,14 @@ const allRequests = useMemo(() => {
             className="flex flex-col items-center justify-center gap-1 text-[11px]"
           >
             <span className="text-lg leading-none">➕</span>
-            <span className="text-slate-700 font-semibold">Create</span>
+            <span className="font-semibold text-slate-700">Create</span>
           </button>
 
           <button
             onClick={() => go("/events", "events")}
             className={`flex flex-col items-center justify-center gap-1 text-[11px] ${
               footerTab === "events"
-                ? "text-[#2D6BFF] font-semibold"
+                ? "font-semibold text-[#2D6BFF]"
                 : "text-slate-500"
             }`}
           >
@@ -724,7 +897,7 @@ const allRequests = useMemo(() => {
             onClick={() => go("/profile", "profile")}
             className={`flex flex-col items-center justify-center gap-1 text-[11px] ${
               footerTab === "profile"
-                ? "text-[#2D6BFF] font-semibold"
+                ? "font-semibold text-[#2D6BFF]"
                 : "text-slate-500"
             }`}
           >

@@ -4,23 +4,28 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  addMyRequest,
-  deriveInterestTags,
-  getMyRequests,
-  getNextRequestId,
-  getProfileDisplayName,
-  getProfileRoleLabel,
-  type CollaborationPost,
-} from "@/lib/collaboration";
+import { apiFetch } from "@/lib/api";
 
 type FooterTab = "home" | "explore" | "create" | "events" | "profile";
+
+type CreateProjectResponse = {
+  id: string;
+  title: string;
+  description: string;
+  requiredSkills?: string[];
+  requiredDomains?: string[];
+  optionalSkills?: string[];
+  preferredExperienceLevel?: string;
+  maxCohortSize?: number;
+  visibilityMode?: string;
+};
 
 export default function CreateCollaborationPage() {
   const router = useRouter();
 
   const [footerTab, setFooterTab] = useState<FooterTab>("create");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({
     title: "",
@@ -55,7 +60,54 @@ export default function CreateCollaborationPage() {
     setError("");
   }
 
-  function handleSubmit() {
+  
+
+  function mapVisibilityMode(value: string) {
+    return value === "private" ? "private" : "open";
+  }
+
+  function deriveOptionalSkills(skillsArray: string[]) {
+    if (skillsArray.length <= 2) return [];
+    return skillsArray.slice(2);
+  }
+
+  function deriveRequiredDomains(title: string, shortDesc: string, skillsArray: string[]) {
+    const combined = `${title} ${shortDesc} ${skillsArray.join(" ")}`.toLowerCase();
+
+    const domains: string[] = [];
+
+    if (
+      combined.includes("react") ||
+      combined.includes("node") ||
+      combined.includes("web") ||
+      combined.includes("frontend") ||
+      combined.includes("backend") ||
+      combined.includes("full stack")
+    ) {
+      domains.push("Web Dev");
+    }
+
+    if (
+      combined.includes("ai") ||
+      combined.includes("ml") ||
+      combined.includes("machine learning") ||
+      combined.includes("artificial intelligence")
+    ) {
+      domains.push("AI");
+    }
+
+    if (
+      combined.includes("data") ||
+      combined.includes("analytics") ||
+      combined.includes("python")
+    ) {
+      domains.push("Data Science");
+    }
+
+    return domains.length ? domains : ["Web Dev"];
+  }
+
+  async function handleSubmit() {
     const trimmedTitle = form.title.trim();
     const trimmedShortDesc = form.shortDesc.trim();
     const trimmedProblem = form.problem.trim();
@@ -86,38 +138,42 @@ export default function CreateCollaborationPage() {
       return;
     }
 
-    const skillsArray = trimmedSkills
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
+    setError("");
+    setLoading(true);
 
-    const existing = getMyRequests();
+    try {
+      const skillsArray = trimmedSkills
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
 
-    const createdPost: CollaborationPost = {
-      id: getNextRequestId(existing),
-      title: trimmedTitle,
-      by: getProfileDisplayName(),
-      role: getProfileRoleLabel(),
-      skills: skillsArray,
-      type: form.type === "public" ? "Public" : "Private",
-      mode: "Online",
-      hours: form.hours,
-      interestTags: deriveInterestTags({
+      const payload = {
         title: trimmedTitle,
-        skills: skillsArray,
-        problem: trimmedProblem,
-      }),
-      shortDesc: trimmedShortDesc,
-      problem: trimmedProblem,
-      experience: form.experience,
-      duration: form.duration.trim(),
-      compensation: form.compensation,
-      createdAt: new Date().toISOString(),
-    };
+        description: `${trimmedShortDesc}\n\nProblem Statement:\n${trimmedProblem}${
+          form.hours ? `\n\nWeekly Time Commitment: ${form.hours}` : ""
+        }${form.duration.trim() ? `\nProject Duration: ${form.duration.trim()}` : ""}${
+          form.compensation ? `\nCompensation: ${form.compensation}` : ""
+        }`,
+        requiredSkills: skillsArray.slice(0, 2),
+        requiredDomains: deriveRequiredDomains(trimmedTitle, trimmedShortDesc, skillsArray),
+        optionalSkills: deriveOptionalSkills(skillsArray),
+        preferredExperienceLevel: form.experience || "any",
+        maxCohortSize: 5,
+        visibilityMode: mapVisibilityMode(form.type),
+      };
 
-    addMyRequest(createdPost);
-    resetForm();
-    router.push("/explore");
+      await apiFetch<CreateProjectResponse>("/projects", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+
+      resetForm();
+      router.push("/explore");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create collaboration.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   const go = (path: string, tab?: FooterTab) => {
@@ -203,9 +259,10 @@ export default function CreateCollaborationPage() {
             className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#2D6BFF]"
           >
             <option value="">Select level</option>
-            <option>Beginner</option>
-            <option>Intermediate</option>
-            <option>Advanced</option>
+<option value="junior">Beginner</option>
+<option value="mid">Intermediate</option>
+<option value="senior">Advanced</option>
+<option value="any">Any</option>
           </select>
         </div>
 
@@ -274,9 +331,10 @@ export default function CreateCollaborationPage() {
 
         <button
           onClick={handleSubmit}
-          className="mt-6 h-12 w-full rounded-2xl bg-[#2D6BFF] font-extrabold text-white shadow-md active:scale-[0.99]"
+          disabled={loading}
+          className="mt-6 h-12 w-full rounded-2xl bg-[#2D6BFF] font-extrabold text-white shadow-md active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Create Collaboration →
+          {loading ? "Creating..." : "Create Collaboration →"}
         </button>
       </div>
 
