@@ -676,16 +676,14 @@ export default function ProjectWorkspacePage() {
   ];
 
   function getNextActivityId() {
-    return projectState.activity.length > 0
-      ? Math.max(...!projectState.activity.map((item) => item.id)) + 1
-      : 1;
-  }
+  if (!projectState || projectState.activity.length === 0) return 1;
+  return Math.max(...projectState.activity.map((item) => item.id)) + 1;
+}
 
-  function getNextMilestoneId() {
-    return projectState.milestones.length > 0
-      ? Math.max(...!projectState.milestones.map((item) => item.id)) + 1
-      : 1;
-  }
+function getNextMilestoneId() {
+  if (!projectState || projectState.milestones.length === 0) return 1;
+  return Math.max(...projectState.milestones.map((item) => item.id)) + 1;
+}
 
   function resetTaskForm() {
     setNewTaskTitle("");
