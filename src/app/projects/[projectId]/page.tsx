@@ -676,13 +676,13 @@ export default function ProjectWorkspacePage() {
   ];
 
   function getNextActivityId() {
-    return !projectState.activity.length > 0
+    return projectState.activity.length > 0
       ? Math.max(...!projectState.activity.map((item) => item.id)) + 1
       : 1;
   }
 
   function getNextMilestoneId() {
-    return !projectState.milestones.length > 0
+    return projectState.milestones.length > 0
       ? Math.max(...!projectState.milestones.map((item) => item.id)) + 1
       : 1;
   }
