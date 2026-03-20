@@ -7,6 +7,7 @@ import BottomNav from "../navigation/BottomNav";
 
 type ActiveCollab = {
   id: number;
+  projectId: string;
   title: string;
   status: "Active" | "Paused";
   deadline: string;
@@ -46,7 +47,8 @@ const mockActivity: ActivityPost[] = [
     orgSubtitle: "Survey",
     logoText: "A",
     images: ["/feed/campus-1.jpg", "/feed/campus-2.jpg"],
-    text: "Quick survey: what should we build next for student-startup collaborations?",
+    text:
+      "Quick survey: what should we build next for student-startup collaborations?",
     time: "6h ago",
   },
 ];
@@ -72,6 +74,44 @@ function getDisplayName(): string {
   }
 }
 
+function buildQuickLinks(projectId: string) {
+  return [
+    { label: "Workspace" as const, path: `/projects/${projectId}` },
+    { label: "Milestones" as const, path: `/projects/${projectId}` },
+    { label: "Meetings" as const, path: `/projects/${projectId}/meetings` },
+  ];
+}
+
+function resolveProjectIdFromLegacyTitle(title: string) {
+  const normalized = title.trim().toLowerCase();
+
+  if (normalized.includes("ai model optimization")) return "sphere-ai-collab";
+  if (normalized.includes("startup landing page revamp"))
+    return "startup-landing-revamp";
+  if (normalized.includes("creator community mobile app"))
+    return "creator-community-app";
+
+  return "sphere-ai-collab";
+}
+
+function normalizeStoredCollab(item: any): ActiveCollab {
+  const projectId =
+    item?.projectId ||
+    item?.slug ||
+    item?.projectSlug ||
+    resolveProjectIdFromLegacyTitle(item?.title || "");
+
+  return {
+    id: Number(item?.id ?? Date.now()),
+    projectId,
+    title: item?.title || "Untitled Collaboration",
+    status: item?.status === "Paused" ? "Paused" : "Active",
+    deadline: item?.deadline || "Deadline: --/--/--",
+    sprintsLeft: item?.sprintsLeft || "0 sprints left",
+    quickLinks: buildQuickLinks(projectId),
+  };
+}
+
 export default function HomePage() {
   const router = useRouter();
 
@@ -89,44 +129,36 @@ export default function HomePage() {
       const parsed = raw ? JSON.parse(raw) : null;
 
       if (Array.isArray(parsed) && parsed.length) {
-        setActiveCollabs(parsed);
+        const normalized = parsed.map(normalizeStoredCollab);
+        setActiveCollabs(normalized);
       } else {
         setActiveCollabs([
           {
             id: 901,
+            projectId: "sphere-ai-collab",
             title: "AI Model Optimization",
             status: "Active",
             deadline: "Deadline: 10/03/26",
             sprintsLeft: "2 sprints left",
-            quickLinks: [
-              { label: "Workspace", path: "/projects/sphere-ai-collab" },
-              { label: "Milestones", path: "/projects/sphere-ai-collab" },
-              { label: "Meetings", path: "/projects/sphere-ai-collab/meetings" },
-            ],
+            quickLinks: buildQuickLinks("sphere-ai-collab"),
           },
           {
             id: 902,
+            projectId: "startup-landing-revamp",
             title: "Startup Landing Page Revamp",
             status: "Active",
             deadline: "Deadline: 18/03/26",
             sprintsLeft: "1 sprint left",
-            quickLinks: [
-              { label: "Workspace", path: "/projects/sphere-ai-collab" },
-              { label: "Milestones", path: "/projects/sphere-ai-collab" },
-              { label: "Meetings", path: "/projects/sphere-ai-collab/meetings" },
-            ],
+            quickLinks: buildQuickLinks("startup-landing-revamp"),
           },
           {
             id: 903,
+            projectId: "creator-community-app",
             title: "Creator Community Mobile App",
             status: "Paused",
             deadline: "Deadline: 28/03/26",
             sprintsLeft: "3 sprints left",
-            quickLinks: [
-              { label: "Workspace", path: "/projects/sphere-ai-collab" },
-              { label: "Milestones", path: "/projects/sphere-ai-collab" },
-              { label: "Meetings", path: "/projects/sphere-ai-collab/meetings" },
-            ],
+            quickLinks: buildQuickLinks("creator-community-app"),
           },
         ]);
       }
@@ -209,13 +241,13 @@ export default function HomePage() {
               activeCollabs.map((c) => (
                 <div
                   key={c.id}
-                  onClick={() => go(c.quickLinks[0]?.path || "/projects")}
+                  onClick={() => go(`/projects/${c.projectId}`)}
                   role="button"
                   tabIndex={0}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
-                      go(c.quickLinks[0]?.path || "/projects");
+                      go(`/projects/${c.projectId}`);
                     }
                   }}
                   className="min-w-[220px] cursor-pointer rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 shadow-sm"
