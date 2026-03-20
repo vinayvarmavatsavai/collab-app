@@ -57,12 +57,12 @@ export const projects: ProjectItem[] = [
     description:
       "This workspace helps teams manage projects, tasks, updates, milestones, and collaboration across product development.",
     category: "Startup Collaboration",
-    createdBy: "Vinay",
+    createdBy: "Rahul",
     dueDate: "2026-03-30",
     team: [
       {
         id: 1,
-        name: "Vinay",
+        name: "Rahul",
         role: "Frontend Developer",
         avatar: "V",
       },
@@ -83,7 +83,7 @@ export const projects: ProjectItem[] = [
       {
         id: 1,
         title: "Build onboarding flow",
-        assignee: "Vinay",
+        assignee: "Rahul",
         priority: "High",
         status: "Done",
         dueDate: "2026-03-14",
@@ -99,7 +99,7 @@ export const projects: ProjectItem[] = [
       {
         id: 3,
         title: "Setup project routing",
-        assignee: "Vinay",
+        assignee: "Rahul",
         priority: "Medium",
         status: "Done",
         dueDate: "2026-03-12",
@@ -107,7 +107,7 @@ export const projects: ProjectItem[] = [
       {
         id: 4,
         title: "Build task tracker",
-        assignee: "Vinay",
+        assignee: "Rahul",
         priority: "High",
         status: "Review",
         dueDate: "2026-03-17",
@@ -123,7 +123,7 @@ export const projects: ProjectItem[] = [
       {
         id: 6,
         title: "Add milestones section",
-        assignee: "Vinay",
+        assignee: "Rahul",
         priority: "Medium",
         status: "In Progress",
         dueDate: "2026-03-19",
@@ -136,7 +136,7 @@ export const projects: ProjectItem[] = [
         description:
           "Complete the core project workspace with task tracker, updates, milestones, and team visibility.",
         dueDate: "2026-03-20",
-        owner: "Vinay",
+        owner: "Rahul",
         priority: "High",
         linkedTaskIds: [1, 3, 4, 6],
       },
@@ -164,7 +164,7 @@ export const projects: ProjectItem[] = [
     activity: [
       {
         id: 1,
-        text: "Vinay completed onboarding flow and connected workspace route.",
+        text: "Rahul completed onboarding flow and connected workspace route.",
         time: "2 hours ago",
       },
       {

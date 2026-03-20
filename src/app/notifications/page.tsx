@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-
-type FooterTab = "home" | "explore" | "create" | "events" | "profile";
+import Header from "@/app/navigation/Header";
+import BottomNav from "@/app/navigation/BottomNav";
 
 type NotiType = "match" | "apply" | "status" | "message" | "cohort" | "system";
 
@@ -62,8 +62,7 @@ function seedIfEmpty() {
       id: uid(),
       type: "match",
       title: "New match found",
-      message:
-        "AI matched you to: “Build AI Resume Analyzer”. Tap to view & apply.",
+      message: "AI matched you to: “Build AI Resume Analyzer”.",
       createdAt: now - 1000 * 60 * 8,
       read: false,
       href: "/collaboration/1",
@@ -74,7 +73,7 @@ function seedIfEmpty() {
       title: "New application received",
       message:
         "Ayesha applied to your collaboration: “Startup Landing Page Design”.",
-      createdAt: now - 1000 * 60 * 40,
+      createdAt: now - 1000 * 60 * 60,
       read: false,
       href: "/create",
     },
@@ -83,28 +82,9 @@ function seedIfEmpty() {
       type: "message",
       title: "New message",
       message: "Rahul: “Can you share your availability for this week?”",
-      createdAt: now - 1000 * 60 * 90,
+      createdAt: now - 1000 * 60 * 60 * 4,
       read: true,
       href: "/messages",
-    },
-    {
-      id: uid(),
-      type: "status",
-      title: "Application accepted",
-      message:
-        "You were accepted into: “Mobile App Backend APIs”. Group chat created.",
-      createdAt: now - 1000 * 60 * 60 * 5,
-      read: true,
-      href: "/messages",
-    },
-    {
-      id: uid(),
-      type: "cohort",
-      title: "Cohort approved",
-      message: "Your request to join “Startup Builders Cohort” was approved.",
-      createdAt: now - 1000 * 60 * 60 * 22,
-      read: false,
-      href: "/events",
     },
   ];
 
@@ -129,10 +109,6 @@ function saveList(list: NotificationItem[]) {
 export default function NotificationsPage() {
   const router = useRouter();
 
-  // Footer active highlighting (optional) — keeping none active is weird,
-  // so we set it to "home" visually neutral. You can set to "explore" if you want.
-  const [activeTab, setActiveTab] = useState<FooterTab>("home");
-
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [filter, setFilter] = useState<"all" | "unread">("all");
 
@@ -150,11 +126,6 @@ export default function NotificationsPage() {
     const sorted = [...items].sort((a, b) => b.createdAt - a.createdAt);
     return filter === "unread" ? sorted.filter((n) => !n.read) : sorted;
   }, [items, filter]);
-
-  const go = (path: string, tab?: FooterTab) => {
-    if (tab) setActiveTab(tab);
-    router.push(path);
-  };
 
   const markAllRead = () => {
     const updated = items.map((n) => ({ ...n, read: true }));
@@ -185,229 +156,127 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F6FB] text-slate-900 px-4 py-6 pb-24">
-      {/* Header (match app) */}
-      <div className="mb-6 flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3">
-          <button
-            onClick={() => router.back()}
-            className="h-10 w-10 rounded-xl border border-slate-200 bg-white shadow-sm flex items-center justify-center"
-            aria-label="Back"
-            title="Back"
-          >
-            ←
-          </button>
+    <div className="sync-theme-page sync-page-with-bottom-nav min-h-dvh">
+      <Header title="Notifications" />
 
-          <div>
-            <h1 className="text-2xl font-bold leading-tight">
-              Notifications
-            </h1>
-            <p className="text-slate-500 text-sm">{unreadCount} unread</p>
-          </div>
-        </div>
-
-        {/* Right icons: Bell + QR + Messages */}
-        <div className="flex items-center gap-2">
-          <button
-            aria-label="Notifications"
-            title="Notifications"
-            onClick={() => go("/notifications")}
-            className="h-10 w-10 rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition flex items-center justify-center"
-          >
-            <span className="text-lg leading-none">🔔</span>
-          </button>
-
-          <button
-            aria-label="QR"
-            title="QR"
-            onClick={() => go("/qr")}
-            className="h-10 w-10 rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition flex items-center justify-center"
-          >
-            <img
-              src="/icons/qr.png"
-              alt="QR"
-              className="h-5 w-5 object-contain"
-            />
-          </button>
-
-          <button
-            aria-label="Messages"
-            title="Messages"
-            onClick={() => go("/messages")}
-            className="h-10 w-10 rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition flex items-center justify-center"
-          >
-            <span className="text-lg leading-none">💬</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Filter + actions */}
-      <div className="mt-2 flex items-center justify-between gap-3">
-        <div className="inline-flex bg-white border border-slate-200 rounded-2xl p-1 shadow-sm">
-          <button
-            onClick={() => setFilter("all")}
-            className={`px-3 py-2 rounded-xl text-sm font-semibold ${
-              filter === "all" ? "bg-[#2D6BFF] text-white" : "text-slate-600"
-            }`}
-          >
-            All
-          </button>
-          <button
-            onClick={() => setFilter("unread")}
-            className={`px-3 py-2 rounded-xl text-sm font-semibold ${
-              filter === "unread" ? "bg-[#2D6BFF] text-white" : "text-slate-600"
-            }`}
-          >
-            Unread
-          </button>
-        </div>
-
-        <div className="flex gap-2">
-          <button
-            onClick={markAllRead}
-            className="px-3 py-2 rounded-xl bg-white border border-slate-200 shadow-sm text-sm font-semibold text-slate-700"
-          >
-            Read all
-          </button>
-          <button
-            onClick={clearAll}
-            className="px-3 py-2 rounded-xl bg-white border border-slate-200 shadow-sm text-sm font-semibold text-slate-700"
-          >
-            Clear
-          </button>
-        </div>
-      </div>
-
-      {/* List */}
-      <div className="mt-5 space-y-3">
-        {visible.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm text-center">
-            <div className="text-2xl">🔕</div>
-            <div className="mt-2 font-semibold">No notifications</div>
-            <div className="text-sm text-slate-500 mt-1">
-              You’re all caught up.
-            </div>
-          </div>
-        ) : (
-          visible.map((n) => (
-            <div
-              key={n.id}
-              className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm ${
-                n.read ? "opacity-90" : ""
+      <div className="mx-auto w-full max-w-[480px] px-4 pb-4">
+        <div className="mt-4 flex items-center justify-between gap-2 flex-wrap">
+          <div className="inline-flex rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)] p-1">
+            <button
+              onClick={() => setFilter("all")}
+              className={`rounded-xl px-4 py-2 text-sm font-semibold ${
+                filter === "all"
+                  ? "bg-[var(--surface-solid)] text-[var(--text-main)] shadow-sm"
+                  : "text-[var(--text-muted-2)]"
               }`}
             >
-              <button onClick={() => openNoti(n)} className="w-full text-left">
-                <div className="flex items-start gap-3">
-                  <div className="h-10 w-10 rounded-2xl bg-slate-100 flex items-center justify-center text-lg">
-                    {icon(n.type)}
-                  </div>
+              All
+            </button>
 
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="font-semibold leading-snug">
-                        {n.title}
-                      </div>
+            <button
+              onClick={() => setFilter("unread")}
+              className={`rounded-xl px-4 py-2 text-sm font-semibold ${
+                filter === "unread"
+                  ? "bg-[var(--surface-solid)] text-[var(--text-main)] shadow-sm"
+                  : "text-[var(--text-muted-2)]"
+              }`}
+            >
+             {unreadCount} Unread
+              <span
+                className={`ml-1.5 text-xs ${
+                  filter === "unread"
+                    ? "text-[var(--text-main)]"
+                    : "text-[var(--text-muted-2)]"
+                }`}
+              >
+              </span>
+            </button>
+          </div>
 
-                      <div className="flex items-center gap-2">
-                        {!n.read && (
-                          <span className="h-2 w-2 rounded-full bg-[#2D6BFF]" />
-                        )}
-                        <span className="text-xs text-slate-400">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={markAllRead}
+              className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] px-4 py-2 text-sm font-medium text-[var(--text-main)] shadow-sm"
+            >
+              Read all
+            </button>
+
+            <button
+              onClick={clearAll}
+              className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] px-4 py-2 text-sm font-medium text-[var(--text-main)] shadow-sm"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-5 space-y-4">
+          {visible.length === 0 ? (
+            <div className="rounded-3xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-6 text-center shadow-sm">
+              <div className="text-2xl">🔕</div>
+              <div className="mt-2 text-base font-semibold text-[var(--text-main)]">
+                No notifications
+              </div>
+              <div className="mt-1 text-sm text-[var(--text-muted-2)]">
+                You’re all caught up.
+              </div>
+            </div>
+          ) : (
+            visible.map((n) => (
+              <div
+                key={n.id}
+                className="rounded-3xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 shadow-sm"
+              >
+                <button onClick={() => openNoti(n)} className="w-full text-left">
+                  <div className="flex gap-3">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--muted)] text-lg">
+                      {icon(n.type)}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-base font-semibold leading-snug text-[var(--text-main)]">
+                            {n.title}
+                          </div>
+                        </div>
+
+                        <span className="shrink-0 pt-0.5 text-xs text-[var(--text-muted-2)]">
                           {timeAgo(n.createdAt)}
                         </span>
                       </div>
-                    </div>
 
-                    <div className="mt-1 text-sm text-slate-600">
-                      {n.message}
+                      <div className="mt-1 text-sm leading-7 text-[var(--text-muted-2)]">
+                        {n.message}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </button>
-
-              <div className="mt-3 flex gap-2">
-                <button
-                  onClick={() => toggleRead(n.id)}
-                  className="px-3 py-2 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold"
-                >
-                  {n.read ? "Mark unread" : "Mark read"}
                 </button>
 
-                {n.href && (
+                <div className="mt-4 flex flex-wrap gap-2">
                   <button
-                    onClick={() => openNoti(n)}
-                    className="px-3 py-2 rounded-xl bg-[#2D6BFF] text-white text-sm font-semibold"
+                    onClick={() => toggleRead(n.id)}
+                    className="rounded-2xl bg-[var(--muted)] px-4 py-2 text-sm font-medium text-[var(--text-main)]"
                   >
-                    Open
+                    {n.read ? "Mark unread" : "Mark read"}
                   </button>
-                )}
+
+                  {n.href && (
+                    <button
+                      onClick={() => openNoti(n)}
+                      className="rounded-2xl bg-[var(--primary-btn-bg)] px-4 py-2 text-sm font-medium text-[var(--primary-btn-text)]"
+                    >
+                      Open
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))
-        )}
+            ))
+          )}
+        </div>
       </div>
 
-      {/* Footer (match your app) */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 h-16 z-40">
-        <div className="h-full grid grid-cols-5">
-          <button
-            onClick={() => go("/home", "home")}
-            className={`flex flex-col items-center justify-center gap-1 text-[11px] ${
-              activeTab === "home"
-                ? "text-[#2D6BFF] font-semibold"
-                : "text-slate-500"
-            }`}
-          >
-            <span className="text-lg leading-none">🏠</span>
-            <span>Home</span>
-          </button>
-
-          <button
-            onClick={() => go("/explore", "explore")}
-            className={`flex flex-col items-center justify-center gap-1 text-[11px] ${
-              activeTab === "explore"
-                ? "text-[#2D6BFF] font-semibold"
-                : "text-slate-500"
-            }`}
-          >
-            <span className="text-lg leading-none">🧭</span>
-            <span>Explore</span>
-          </button>
-
-          <button
-            onClick={() => go("/create", "create")}
-            className="flex flex-col items-center justify-center gap-1 text-[11px]"
-          >
-            {/* keep your plus */}
-            <span className="text-lg leading-none">➕</span>
-            <span className="text-slate-700 font-semibold">Create</span>
-          </button>
-
-          <button
-            onClick={() => go("/events", "events")}
-            className={`flex flex-col items-center justify-center gap-1 text-[11px] ${
-              activeTab === "events"
-                ? "text-[#2D6BFF] font-semibold"
-                : "text-slate-500"
-            }`}
-          >
-            <span className="text-lg leading-none">📅</span>
-            <span>Events</span>
-          </button>
-
-          <button
-            onClick={() => go("/profile", "profile")}
-            className={`flex flex-col items-center justify-center gap-1 text-[11px] ${
-              activeTab === "profile"
-                ? "text-[#2D6BFF] font-semibold"
-                : "text-slate-500"
-            }`}
-          >
-            <span className="text-lg leading-none">👤</span>
-            <span>Profile</span>
-          </button>
-        </div>
-      </nav>
+      <BottomNav />
     </div>
   );
 }

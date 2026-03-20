@@ -53,7 +53,7 @@ export default function ProfilePage() {
   const [footerTab, setFooterTab] = useState<FooterTab>("profile");
 
   const [profile, setProfile] = useState({
-    name: "Vinay",
+    name: "Rahul",
     role: "Builder • Startups • Collaboration",
     location: "India",
   });

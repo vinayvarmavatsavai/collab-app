@@ -10,7 +10,7 @@ export default function QrPage() {
   const [profileUrl, setProfileUrl] = useState("");
 
   useEffect(() => {
-    const url = `${window.location.origin}/profile/vinay`; // dynamic later
+    const url = `${window.location.origin}/profile/Rahul`; // dynamic later
     setProfileUrl(url);
 
     const canvas = canvasRef.current;

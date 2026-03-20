@@ -53,7 +53,7 @@ const mockActivity: ActivityPost[] = [
 function getDisplayName(): string {
   try {
     const raw = localStorage.getItem("profileAnswers");
-    if (!raw) return "Vinay";
+    if (!raw) return "Rahul";
     const parsed = JSON.parse(raw);
 
     const candidates = [
@@ -64,17 +64,17 @@ function getDisplayName(): string {
       parsed?.["Name"],
     ].filter(Boolean);
 
-    const n = (candidates?.[0] ?? "Vinay") as string;
-    return n.trim() || "Vinay";
+    const n = (candidates?.[0] ?? "Rahul") as string;
+    return n.trim() || "Rahul";
   } catch {
-    return "Vinay";
+    return "Rahul";
   }
 }
 
 export default function HomePage() {
   const router = useRouter();
 
-  const [name, setName] = useState("Vinay");
+  const [name, setName] = useState("Rahul");
   const [activeCollabs, setActiveCollabs] = useState<ActiveCollab[]>([]);
   const [imgIndexByPost, setImgIndexByPost] = useState<Record<number, number>>(
     {},

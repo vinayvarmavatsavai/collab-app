@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Navbar } from "@/components/navbar"
 import { ChatSidebar } from "@/components/messaging/chat-sidebar"
 import { ChatWindow } from "@/components/messaging/chat-window"
 import { contacts } from "@/components/messaging/chat-data"
 import { useIsMobile } from "@/hooks/use-mobile"
+import Header from "../navigation/Header";
 
 export function MessagingPage() {
   const router = useRouter()
@@ -35,7 +35,9 @@ export function MessagingPage() {
 
   return (
     <div className="flex h-screen flex-col">
-      <Navbar showBack />
+      <Header
+              title="Chats"
+            />
       <div className="flex min-h-0 flex-1">
         {showSidebar && (
           <ChatSidebar

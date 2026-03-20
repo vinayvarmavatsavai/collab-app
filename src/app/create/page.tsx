@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Header from "../navigation/Header";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import BottomNav from "../navigation/BottomNav";
@@ -119,31 +120,16 @@ export default function CreateCollaborationPage() {
 
   return (
     <div className="sync-theme-page sync-page-with-bottom-nav min-h-dvh pb-24">
-      <div className="sync-theme-surface sticky top-0 z-30 border-b sync-theme-border px-4 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="sync-theme-text-main text-[20px] font-extrabold">
-              Create Collaboration
-            </div>
-            <div className="sync-theme-text-muted text-sm">
-              Define your project clearly to attract the right collaborators.
-            </div>
-          </div>
-
-          <button
-            onClick={() => router.back()}
-            className="sync-theme-surface sync-theme-border sync-theme-text-main flex h-10 w-10 items-center justify-center rounded-full border"
-            aria-label="Go back"
-            title="Back"
-          >
-            <ArrowLeft size={18} />
-          </button>
-        </div>
+      <div className="sticky top-0 z-30 sync-theme-page">
+        <Header
+          title="Collaboration"
+          subtitle="Define your project clearly to attract the right collaborators."
+        />
       </div>
 
-      <div className="space-y-6 px-4 py-6">
+      <div className="mx-auto w-full max-w-[480px] space-y-6 px-4 py-4">
         <div>
-          <label className="sync-theme-text-main mb-2 block text-sm font-semibold">
+          <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
             Project Title *
           </label>
           <input
@@ -156,7 +142,7 @@ export default function CreateCollaborationPage() {
         </div>
 
         <div>
-          <label className="sync-theme-text-main mb-2 block text-sm font-semibold">
+          <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
             Short Description *
           </label>
           <textarea
@@ -170,7 +156,7 @@ export default function CreateCollaborationPage() {
         </div>
 
         <div>
-          <label className="sync-theme-text-main mb-2 block text-sm font-semibold">
+          <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
             Problem Statement *
           </label>
           <textarea
@@ -184,7 +170,7 @@ export default function CreateCollaborationPage() {
         </div>
 
         <div>
-          <label className="sync-theme-text-main mb-2 block text-sm font-semibold">
+          <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
             Required Skills *
           </label>
           <input
@@ -197,7 +183,7 @@ export default function CreateCollaborationPage() {
         </div>
 
         <div>
-          <label className="sync-theme-text-main mb-2 block text-sm font-semibold">
+          <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
             Experience Level Needed
           </label>
           <select
@@ -214,7 +200,7 @@ export default function CreateCollaborationPage() {
         </div>
 
         <div>
-          <label className="sync-theme-text-main mb-2 block text-sm font-semibold">
+          <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
             Weekly Time Commitment *
           </label>
           <select
@@ -232,7 +218,7 @@ export default function CreateCollaborationPage() {
         </div>
 
         <div>
-          <label className="sync-theme-text-main mb-2 block text-sm font-semibold">
+          <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
             Project Duration
           </label>
           <input
@@ -245,7 +231,7 @@ export default function CreateCollaborationPage() {
         </div>
 
         <div>
-          <label className="sync-theme-text-main mb-2 block text-sm font-semibold">
+          <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
             Compensation
           </label>
           <select
@@ -262,7 +248,7 @@ export default function CreateCollaborationPage() {
         </div>
 
         <div>
-          <label className="sync-theme-text-main mb-2 block text-sm font-semibold">
+          <label className="mb-2 block text-sm font-semibold text-[var(--text-main)]">
             Collaboration Type
           </label>
           <select
@@ -277,14 +263,14 @@ export default function CreateCollaborationPage() {
         </div>
 
         {error ? (
-          <div className="sync-theme-danger-soft rounded-2xl border px-4 py-3 text-sm">
+          <div className="rounded-2xl border border-[var(--danger-soft-border)] bg-[var(--danger-soft-bg)] px-4 py-3 text-sm text-[var(--danger-soft-text)]">
             {error}
           </div>
         ) : null}
 
         <button
           onClick={handleSubmit}
-          className="sync-theme-primary-btn sync-theme-shadow-soft mt-6 h-12 w-full rounded-2xl font-extrabold"
+          className="sync-theme-primary-btn mt-6 h-12 w-full rounded-2xl font-extrabold shadow-sm"
         >
           Create Collaboration →
         </button>

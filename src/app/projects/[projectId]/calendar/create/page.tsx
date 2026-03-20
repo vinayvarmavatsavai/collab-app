@@ -65,7 +65,7 @@ export default function CreateMeetingPage({
       participants: form.participants,
       provider: form.provider,
       meetingLink: form.meetingLink || `https://meetings.example.com/project/${projectId}/${Date.now()}`,
-      createdBy: "vinay",
+      createdBy: "Rahul",
     });
 
     router.push(`/project/${projectId}/calendar/${event.id}`);
