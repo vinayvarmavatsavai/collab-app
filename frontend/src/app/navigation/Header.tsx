@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Bell, CircleUserRound, Plus } from "lucide-react";
+import { logout } from "@/lib/auth";
 
 type HeaderVariant = "default" | "profile";
 
@@ -22,6 +23,7 @@ export default function Header({
 }: HeaderProps) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -39,12 +41,31 @@ export default function Header({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [menuOpen]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("profileCompleted");
-    localStorage.removeItem("signupCompleted");
-    localStorage.removeItem("profileAnswers");
-    setMenuOpen(false);
-    router.push("/");
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+
+    try {
+      setIsLoggingOut(true);
+      await logout();
+
+      localStorage.removeItem("profileCompleted");
+      localStorage.removeItem("signupCompleted");
+      localStorage.removeItem("profileAnswers");
+
+      setMenuOpen(false);
+      router.replace("/auth/login");
+    } catch (error) {
+      console.error("Logout failed:", error);
+
+      localStorage.removeItem("profileCompleted");
+      localStorage.removeItem("signupCompleted");
+      localStorage.removeItem("profileAnswers");
+
+      setMenuOpen(false);
+      router.replace("/auth/login");
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   return (
@@ -60,6 +81,7 @@ export default function Header({
                 className="sync-page-actions__btn"
                 aria-label="QR"
                 title="QR"
+                type="button"
               >
                 <img
                   src="/icons/qr.png"
@@ -73,6 +95,7 @@ export default function Header({
                 className="sync-page-actions__btn"
                 aria-label="Menu"
                 title="Menu"
+                type="button"
               >
                 ☰
               </button>
@@ -85,15 +108,18 @@ export default function Header({
                       alert("Settings page coming soon");
                     }}
                     className="w-full rounded-xl px-3 py-2 text-left text-sm hover:bg-[var(--muted)]"
+                    type="button"
                   >
                     Settings
                   </button>
 
                   <button
                     onClick={handleLogout}
-                    className="w-full rounded-xl px-3 py-2 text-left text-sm text-red-500 hover:bg-[var(--muted)]"
+                    className="w-full rounded-xl px-3 py-2 text-left text-sm text-red-500 hover:bg-[var(--muted)] disabled:opacity-60"
+                    type="button"
+                    disabled={isLoggingOut}
                   >
-                    Logout
+                    {isLoggingOut ? "Logging out..." : "Logout"}
                   </button>
                 </div>
               )}

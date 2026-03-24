@@ -38,56 +38,56 @@ export class AuthService {
   ) { }
 
   async signupUser(dto: {
-    email: string;
-    username: string;
-    password: string;
-    firstname: string;
-    lastname: string;
-    phone: string;
-    skills: string[];
-    intent: any;
-  }) {
-    const existing = await this.identityRepo.findOne({
-      where: [{ email: dto.email }, { username: dto.username }],
-    });
+  email: string;
+  username: string;
+  password: string;
+  firstname: string;
+  lastname: string;
+  phone: string;
+  skills: string[];
+  intent: any;
+}) {
+  const normalizedEmail = dto.email.trim().toLowerCase();
+  const normalizedUsername = dto.username.trim().toLowerCase();
 
-    if (existing) {
-      throw new ConflictException('Identity already exists');
-    }
+  const existing = await this.identityRepo.findOne({
+    where: [{ email: normalizedEmail }, { username: normalizedUsername }],
+  });
 
-    const identity = this.identityRepo.create({
-      email: dto.email,
-      username: dto.username,
-      passwordHash: await bcrypt.hash(dto.password, 10),
-      type: 'ADMIN', // Default to USER, admin can change manually or via other flow
-      status: IdentityStatus.ACTIVE,
-    });
-
-    await this.identityRepo.save(identity);
-
-    // Create user profile linked to identity
-    const profile = await this.usersService.createUserProfile(identity.id, {
-      firstname: dto.firstname,
-      lastname: dto.lastname,
-      phone: dto.phone,
-      skills: dto.skills,
-      intent: dto.intent,
-    });
-
-    // Auto-join institution community
-    try {
-      await this.communitiesService.handleNewUser(identity.email, profile.id);
-    } catch (e) {
-      // Don't block signup if community logic fails
-      console.error('Failed to handle new user community:', e);
-    }
-
-    return {
-      id: identity.id,
-      email: identity.email,
-      type: identity.type,
-    };
+  if (existing) {
+    throw new ConflictException('Identity already exists');
   }
+
+  const identity = this.identityRepo.create({
+    email: normalizedEmail,
+    username: normalizedUsername,
+    passwordHash: await bcrypt.hash(dto.password, 10),
+    type: 'ADMIN',
+    status: IdentityStatus.ACTIVE,
+  });
+
+  await this.identityRepo.save(identity);
+
+  const profile = await this.usersService.createUserProfile(identity.id, {
+    firstname: dto.firstname,
+    lastname: dto.lastname,
+    phone: dto.phone,
+    skills: dto.skills,
+    intent: dto.intent,
+  });
+
+  try {
+    await this.communitiesService.handleNewUser(identity.email, profile.id);
+  } catch (e) {
+    console.error('Failed to handle new user community:', e);
+  }
+
+  return {
+    id: identity.id,
+    email: identity.email,
+    type: identity.type,
+  };
+}
 
 
   async signin(email: string, password: string, ip?: string, ua?: string) {

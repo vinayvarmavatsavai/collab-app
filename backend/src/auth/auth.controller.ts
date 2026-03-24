@@ -62,11 +62,11 @@ export class AuthController {
     );
 
     res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+  httpOnly: true,
+  secure: false,
+  sameSite: 'lax',
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+});
 
     return {
       accessToken,
@@ -118,10 +118,10 @@ export class AuthController {
     await this.authService.logout(logoutDto.sessionId);
 
     res.clearCookie('refreshToken', {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-    });
+  httpOnly: true,
+  secure: false,
+  sameSite: 'lax',
+});
 
     return { message: 'Logged out successfully' };
   }

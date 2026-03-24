@@ -67,7 +67,7 @@ const DB_CONFIG = {
     port: parseInt(process.env.DB_PORT || '5432', 10),
     username: process.env.DB_USERNAME || process.env.DB_USER || 'postgres',
     password: process.env.DB_PASSWORD || 'postgres',
-    database: process.env.DB_NAME || process.env.DB_DATABASE || 'startup101',
+    database: process.env.DB_NAME || process.env.DB_DATABASE || 'spherenet',
     ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : (false as false),
 };
 
