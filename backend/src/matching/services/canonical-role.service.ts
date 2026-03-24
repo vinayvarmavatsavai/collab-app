@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { ProfessionalRole } from '../entities/professional-role.entity';
 import { RoleAlias } from '../entities/role-alias.entity';
@@ -34,58 +34,80 @@ export class CanonicalRoleService {
         private configService: ConfigService,
     ) { }
 
-    /**
-     * Find or create canonical role from user input
-     * PRODUCTION-HARDENED: Prevents canonical role explosion
-     */
     async findOrCreateCanonicalRole(
         input: string,
         primaryDomainId?: string,
         userId?: string,
     ): Promise<ProfessionalRole> {
-        // 0 — Safety gate: moderation (must be first)
         await this.moderationService.validateInput(input, userId, 'role');
 
-        const normalized = this.normalizationService.normalizeSkill(input);
+        const raw = (input || '').trim();
+        const normalized = this.normalizationService.normalizeSkill(raw);
+
+        this.logger.log(`ROLE INPUT RECEIVED: ${raw}`);
+        this.logger.log(`ROLE NORMALIZED: ${normalized}`);
 
         if (!normalized || normalized.length < 2) {
             throw new Error('Invalid role input: too short');
         }
 
-        // 1 — Exact match
+        // 1. Exact match by normalized name
         let role = await this.professionalRoleRepo.findOne({
             where: { normalizedName: normalized },
         });
 
         if (role) {
             await this.incrementUsageCount(role.id);
-            this.logger.log(`Exact match: "${input}" -> "${role.name}"`);
+            this.logger.log(`Exact normalized role match: "${raw}" -> "${role.name}"`);
             return role;
         }
 
-        // 2 — Alias match
+        // 2. Exact match by actual name (case-insensitive)
+        role = await this.professionalRoleRepo.findOne({
+            where: { name: ILike(raw) },
+        });
+
+        if (role) {
+            await this.incrementUsageCount(role.id);
+            this.logger.log(`Exact role name match: "${raw}" -> "${role.name}"`);
+            return role;
+        }
+
+        // 3. Alias match by normalized alias
         const alias = await this.roleAliasRepo.findOne({
             where: { normalizedAlias: normalized },
             relations: ['professionalRole'],
         });
 
-        if (alias) {
+        if (alias?.professionalRole) {
             await this.incrementUsageCount(alias.professionalRoleId);
-            this.logger.log(`Alias match: "${input}" -> "${alias.professionalRole.name}"`);
+            this.logger.log(`Alias role match: "${raw}" -> "${alias.professionalRole.name}"`);
             return alias.professionalRole;
         }
 
-        // 3 — Rate limit check BEFORE creating new entries (including auto-merge aliases)
+        // 4. Alias match by actual alias text (case-insensitive)
+        const aliasByName = await this.roleAliasRepo.findOne({
+            where: { alias: ILike(raw) },
+            relations: ['professionalRole'],
+        });
+
+        if (aliasByName?.professionalRole) {
+            await this.incrementUsageCount(aliasByName.professionalRoleId);
+            this.logger.log(`Alias-by-name role match: "${raw}" -> "${aliasByName.professionalRole.name}"`);
+            return aliasByName.professionalRole;
+        }
+
+        // 5. Rate limit before creating new entries
         if (userId) {
             await this.rateLimitService.checkAndIncrement(userId);
         }
 
-        // 4 — Deterministic Typo/Fuzzy Match (pg_trgm + levenshtein)
+        // 6. Fuzzy fallback
         const fuzzyThreshold = this.configService.get<number>('matching.canonical.fuzzyMatchThreshold') ?? 0.7;
         const maxLevenshtein = this.configService.get<number>('matching.canonical.maxLevenshteinDistance') ?? 2;
 
         const typoMatches = await this.professionalRoleRepo.manager.query(`
-            SELECT id, name, normalized_name, 
+            SELECT id, name, normalized_name,
                    similarity(normalized_name, $1) as sim,
                    levenshtein(normalized_name, $1) as dist
             FROM professional_roles
@@ -97,7 +119,7 @@ export class CanonicalRoleService {
 
         let forcedReview = false;
         if (userId) {
-            const forcedReviewLevel: number = this.configService.get<number>('matching.risk.forcedReviewRiskLevel') ?? 2;
+            const forcedReviewLevel = this.configService.get<number>('matching.risk.forcedReviewRiskLevel') ?? 2;
             const userProfile = await this.getUserProfile(userId);
             forcedReview = userProfile ? userProfile.riskLevel >= forcedReviewLevel : false;
         }
@@ -107,45 +129,55 @@ export class CanonicalRoleService {
             const sim = parseFloat(typoMatch.sim);
             const dist = parseInt(typoMatch.dist, 10);
 
-            // Auto-merge if highly similar OR very low edit distance
             if (!forcedReview && (sim >= 0.8 || dist <= 1 || (normalized.length > 5 && dist <= 2))) {
-                this.logger.log(`Typo/Fuzzy match: "${input}" -> "${typoMatch.name}" (sim=${sim.toFixed(2)}, dist=${dist})`);
-                await this.createAlias(typoMatch.id, input, normalized);
+                this.logger.log(`Typo/Fuzzy role match: "${raw}" -> "${typoMatch.name}" (sim=${sim.toFixed(2)}, dist=${dist})`);
+                await this.createAlias(typoMatch.id, raw, normalized);
                 await this.incrementUsageCount(typoMatch.id);
+
                 const matchEntity = await this.professionalRoleRepo.findOne({ where: { id: typoMatch.id } });
                 if (matchEntity) return matchEntity;
             } else if (sim >= fuzzyThreshold || dist <= 2 || forcedReview) {
-                this.logger.warn(`Typo review: "${input}" ~ "${typoMatch.name}" (sim=${sim.toFixed(2)}, dist=${dist}, forcedReview=${forcedReview})`);
+                this.logger.warn(`Typo review role: "${raw}" ~ "${typoMatch.name}" (sim=${sim.toFixed(2)}, dist=${dist}, forcedReview=${forcedReview})`);
+
                 const newRole = await this.createCanonicalRole(
-                    input, normalized, primaryDomainId,
-                    undefined, false, 1,
+                    raw,
+                    normalized,
+                    primaryDomainId,
+                    undefined,
+                    false,
+                    1,
                 );
+
                 if (userId) {
                     newRole.createdByUserId = userId;
                     await this.professionalRoleRepo.save(newRole);
                 }
-                await this.queueForReview(input, normalized, typoMatch.id, sim >= 0.95 ? sim : 0.95, userId);
+
+                await this.queueForReview(raw, normalized, typoMatch.id, sim >= 0.95 ? sim : 0.95, userId);
                 return newRole;
             }
         }
 
-        // 5 — No match — create new user-generated canonical
-        this.logger.log(`Creating new user-generated role: "${input}"`);
+        // 7. Final fallback: create new canonical role
+        this.logger.log(`Creating new user-generated role: "${raw}"`);
+
         const newRole = await this.createCanonicalRole(
-            input, normalized,
+            raw,
+            normalized,
             primaryDomainId,
-            undefined, false, 1,
+            undefined,
+            false,
+            1,
         );
+
         if (userId) {
             newRole.createdByUserId = userId;
             await this.professionalRoleRepo.save(newRole);
         }
+
         return newRole;
     }
 
-    /**
-     * Create a new canonical role
-     */
     async createCanonicalRole(
         name: string,
         normalizedName: string,
@@ -165,7 +197,6 @@ export class CanonicalRoleService {
 
         const saved = await this.professionalRoleRepo.save(role);
 
-        // Generate embedding asynchronously
         this.generateEmbeddingAsync(saved.id).catch(err => {
             this.logger.error(`Failed to generate embedding for role ${saved.id}: ${err.message}`);
         });
@@ -173,9 +204,6 @@ export class CanonicalRoleService {
         return saved;
     }
 
-    /**
-     * Create role alias
-     */
     async createAlias(professionalRoleId: string, alias: string, normalizedAlias: string): Promise<RoleAlias> {
         const existing = await this.roleAliasRepo.findOne({
             where: { normalizedAlias },
@@ -193,23 +221,16 @@ export class CanonicalRoleService {
 
         try {
             return await this.roleAliasRepo.save(roleAlias);
-        } catch (error) {
+        } catch {
             return await this.roleAliasRepo.findOne({ where: { normalizedAlias } }) || roleAlias;
         }
     }
 
-    /**
-     * @deprecated Use getSuggestions() which now uses vector ANN internally.
-     * Kept for backward compatibility; delegates to vector implementation.
-     */
     async findFuzzyMatch(normalized: string, _threshold = 0.4): Promise<RoleSuggestion | null> {
         const results = await this.getVectorSuggestions(normalized, 1);
         return results.length > 0 ? results[0] : null;
     }
 
-    /**
-     * Vector-based role autocomplete: prefix LIKE + semantic ANN.
-     */
     async getSuggestions(query: string, limit = 10): Promise<RoleSuggestion[]> {
         const normalized = this.normalizationService.normalizeSkill(query);
 
@@ -217,7 +238,6 @@ export class CanonicalRoleService {
             return await this.getPopularRoles(limit);
         }
 
-        // Fast prefix matches
         const prefixMatches = await this.professionalRoleRepo
             .createQueryBuilder('role')
             .where('role.normalized_name LIKE :query', { query: `${normalized}%` })
@@ -230,7 +250,6 @@ export class CanonicalRoleService {
             return prefixMatches.map(role => ({ role, similarity: 1.0, matchType: 'exact' as const }));
         }
 
-        // Vector ANN for remaining slots
         const vectorResults = await this.getVectorSuggestions(query, limit + prefixMatches.length);
         const prefixIds = new Set(prefixMatches.map(r => r.id));
         const semantic = vectorResults.filter(r => !prefixIds.has(r.role.id)).slice(0, limit - prefixMatches.length);
@@ -241,10 +260,6 @@ export class CanonicalRoleService {
         ];
     }
 
-
-    /**
-     * Find similar roles using embeddings
-     */
     async findSimilarRoles(roleId: string, limit = 10): Promise<Array<{ role: ProfessionalRole; similarity: number }>> {
         const role = await this.professionalRoleRepo.findOne({ where: { id: roleId } });
 
@@ -269,9 +284,6 @@ export class CanonicalRoleService {
         }));
     }
 
-    /**
-     * Generate embedding for role
-     */
     private async generateEmbeddingAsync(roleId: string): Promise<void> {
         const role = await this.professionalRoleRepo.findOne({ where: { id: roleId } });
 
@@ -286,28 +298,18 @@ export class CanonicalRoleService {
         }
     }
 
-    /**
-     * Increment usage count
-     */
     async incrementUsageCount(roleId: string): Promise<void> {
         await this.professionalRoleRepo.increment({ id: roleId }, 'usageCount', 1);
     }
 
-    /**
-     * Decrement usage count and delete if unused and user-generated
-     */
     async decrementUsageCount(roleId: string): Promise<void> {
         const role = await this.professionalRoleRepo.findOne({ where: { id: roleId } });
 
         if (!role) return;
 
-        // Decrement
         role.usageCount = Math.max(0, role.usageCount - 1);
 
-        if (
-            role.usageCount === 0 &&
-            !role.isVerified
-        ) {
+        if (role.usageCount === 0 && !role.isVerified) {
             await this.professionalRoleRepo.remove(role);
             this.logger.log(`Deleted unused user-generated role: "${role.name}"`);
         } else {
@@ -315,14 +317,10 @@ export class CanonicalRoleService {
         }
     }
 
-    /**
-     * Get smart-ranked autocomplete suggestions
-     */
     async getSmartSuggestions(query: string, limit = 10): Promise<RoleSuggestion[]> {
         return this.getSuggestions(query, limit);
     }
 
-    /** Internal: vector ANN suggestions */
     private async getVectorSuggestions(query: string, limit: number): Promise<RoleSuggestion[]> {
         const emb = await this.embeddingService.generateEmbedding(query);
         if (!emb) return [];
@@ -382,7 +380,7 @@ export class CanonicalRoleService {
 
             await this.roleReviewQueueRepo.save(queueItem);
             this.logger.log(`Queued role for review: "${rawInput}" (similarity: ${fuzzySimilarity})`);
-        } catch (error) {
+        } catch (error: any) {
             this.logger.error(`Failed to queue role for review: ${error.message}`);
         }
     }
@@ -436,9 +434,7 @@ export class CanonicalRoleService {
     async verifyRole(roleId: string): Promise<void> {
         await this.professionalRoleRepo.update(
             { id: roleId },
-            {
-                isVerified: true,
-            }
+            { isVerified: true }
         );
     }
 
@@ -453,15 +449,10 @@ export class CanonicalRoleService {
         await this.createAlias(destination.id, target.name, target.normalizedName);
         await this.professionalRoleRepo.increment({ id: destination.id }, 'usageCount', target.usageCount);
         await this.professionalRoleRepo.remove(target);
-        await this.professionalRoleRepo.remove(target);
 
         this.logger.log(`Merged role "${target.name}" into "${destination.name}" by admin ${adminId}`);
     }
 
-    /**
-     * Completely deletes a canonical role (Admin Action).
-     * This will CASCADE delete all UserRoles that reference this professional_role_id.
-     */
     async deleteRole(roleId: string, adminId: string): Promise<void> {
         const role = await this.professionalRoleRepo.findOne({ where: { id: roleId } });
         if (!role) {
@@ -471,11 +462,11 @@ export class CanonicalRoleService {
         await this.professionalRoleRepo.remove(role);
         this.logger.log(`Permanently deleted canonical role "${role.name}" (ID: ${roleId}) by admin ${adminId}`);
     }
+
     async getRoleById(id: string): Promise<ProfessionalRole | null> {
         return await this.professionalRoleRepo.findOne({ where: { id } });
     }
 
-    /** @deprecated Delegated to CanonicalRateLimitService */
     private async checkRateLimit(_userId: string): Promise<void> { /* no-op */ }
 
     private async getUserProfile(userId: string): Promise<{ riskLevel: number } | null> {

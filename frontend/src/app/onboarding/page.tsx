@@ -33,32 +33,27 @@ function uid(prefix = "m") {
   return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now()}`;
 }
 
-function fieldHelper(field: string) {
+function fieldHelper(field?: string) {
   switch (field) {
     case "primary_role":
-      return "Choose your main role, or type your own.";
+      return "Pick one role that best represents what you do.";
     case "roles":
-      return "Add any additional roles if relevant.";
+      return "Add any other roles that also fit you.";
     case "domains":
-      return "Select the areas you work in.";
+      return "Choose the areas you work in.";
     case "skills":
-      return "Select your strongest skills, or type custom ones.";
+      return "Choose your main skills, or type your own below.";
     case "interests":
-      return "Share what interests you most.";
+      return "Choose a few interests that match you.";
     case "availability":
-      return "Choose your availability, or type your own.";
+      return "Choose how much time you can commit.";
     default:
       return "";
   }
 }
 
 function getTagLabel(tag: TagSuggestion): string {
-  const maybeLabel =
-    (tag as TagSuggestion & { label?: string }).label ||
-    (tag as TagSuggestion & { name?: string }).name ||
-    tag.value;
-
-  return maybeLabel;
+  return tag.label || tag.value;
 }
 
 function getTagSubmitValue(tag: TagSuggestion): string {
@@ -90,6 +85,86 @@ function isCompleteResponse(
   );
 }
 
+function isSingleSelectField(field?: string) {
+  return field === "primary_role" || field === "availability";
+}
+
+function isRoleField(field?: string) {
+  return field === "primary_role" || field === "roles";
+}
+
+function isDomainField(field?: string) {
+  return field === "domains";
+}
+
+function getFallbackTags(field?: string): TagSuggestion[] {
+  switch (field) {
+    case "skills":
+      return [
+        "React",
+        "Angular",
+        "Vue.js",
+        "Node.js",
+        "Express",
+        "Next.js",
+        "TypeScript",
+        "JavaScript",
+        "Python",
+        "Java",
+        "Spring Boot",
+        "MongoDB",
+        "PostgreSQL",
+        "Docker",
+        "AWS",
+      ].map((value) => ({
+        value,
+        source: "predefined" as const,
+        category: "skill" as const,
+      }));
+
+    case "interests":
+      return [
+        "Open Source",
+        "Startups",
+        "Side Projects",
+        "AI/ML",
+        "Web3",
+        "Social Impact",
+      ].map((value) => ({
+        value,
+        source: "predefined" as const,
+        category: "interest" as const,
+      }));
+
+    case "availability":
+      return [
+        "Part-time",
+        "Full-time",
+        "Weekends",
+        "Flexible",
+      ].map((value) => ({
+        value,
+        source: "predefined" as const,
+        category: "availability" as const,
+      }));
+
+    default:
+      return [];
+  }
+}
+
+function resolveTags(field?: string, tags?: TagSuggestion[]) {
+  console.log("🔍 resolveTags field:", field);
+  console.log("🔍 Backend tags:", tags);
+
+  if (Array.isArray(tags) && tags.length > 0) {
+    return tags;
+  }
+
+  console.warn("⚠️ Using fallback tags for field:", field);
+  return getFallbackTags(field);
+}
+
 export default function ProfileBuilderPage() {
   const router = useRouter();
 
@@ -102,8 +177,8 @@ export default function ProfileBuilderPage() {
     useState<OnboardingQuestionResponse | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const bottomRef = useRef<HTMLDivElement | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
+  const initRanRef = useRef(false);
 
   const [messages, setMessages] = useState<Msg[]>([
     {
@@ -121,7 +196,7 @@ export default function ProfileBuilderPage() {
   const totalSteps = currentQuestion?.totalSteps ?? 6;
 
   const selectedTagLabels = useMemo(() => {
-    const tags = currentQuestion?.tags || [];
+    const tags = resolveTags(currentQuestion?.field, currentQuestion?.tags);
     const labelMap = new Map<string, string>();
 
     tags.forEach((tag) => {
@@ -132,6 +207,9 @@ export default function ProfileBuilderPage() {
   }, [currentQuestion, selectedTags]);
 
   useEffect(() => {
+    if (initRanRef.current) return;
+    initRanRef.current = true;
+
     const identity = getStoredIdentity();
     const token =
       typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
@@ -149,6 +227,8 @@ export default function ProfileBuilderPage() {
     async function init() {
       try {
         const result = await startOnboarding();
+
+        console.log("🚀 startOnboarding result:", result);
 
         setCurrentQuestion(result);
         setMessages((prev) => [
@@ -188,9 +268,7 @@ export default function ProfileBuilderPage() {
 
     const raf1 = requestAnimationFrame(() => {
       scrollToBottom();
-      const raf2 = requestAnimationFrame(() => {
-        scrollToBottom();
-      });
+      const raf2 = requestAnimationFrame(scrollToBottom);
       return () => cancelAnimationFrame(raf2);
     });
 
@@ -201,7 +279,7 @@ export default function ProfileBuilderPage() {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 110) + "px";
+    el.style.height = `${Math.min(el.scrollHeight, 110)}px`;
   }, [input]);
 
   function addUser(text: string) {
@@ -213,6 +291,8 @@ export default function ProfileBuilderPage() {
   }
 
   function addBotQuestion(q: OnboardingQuestionResponse) {
+    console.log("➡️ next question result:", q);
+
     setMessages((prev) => [
       ...prev,
       {
@@ -230,6 +310,15 @@ export default function ProfileBuilderPage() {
   }
 
   function toggleTag(tagValue: string) {
+    setPageError("");
+
+    const field = currentQuestion?.field;
+
+    if (isSingleSelectField(field)) {
+      setSelectedTags((prev) => (prev.includes(tagValue) ? [] : [tagValue]));
+      return;
+    }
+
     setSelectedTags((prev) =>
       prev.includes(tagValue)
         ? prev.filter((item) => item !== tagValue)
@@ -258,6 +347,8 @@ export default function ProfileBuilderPage() {
         selectedTags,
         textInput,
       });
+
+      console.log("✅ answerOnboarding result:", result);
 
       setSelectedTags([]);
       setInput("");
@@ -304,6 +395,8 @@ export default function ProfileBuilderPage() {
 
       const result = await skipOnboarding();
 
+      console.log("⏭️ skipOnboarding result:", result);
+
       if (isCompleteResponse(result)) {
         setDone(true);
 
@@ -338,6 +431,150 @@ export default function ProfileBuilderPage() {
   function handleContinue() {
     if (!done) return;
     router.push("/home");
+  }
+
+  function renderTagOptions(tags: TagSuggestion[], field?: string) {
+    if (isRoleField(field) && field === "primary_role") {
+      return (
+        <div className="mt-4 grid grid-cols-1 gap-3">
+          {tags.map((tag) => {
+            const submitValue = getTagSubmitValue(tag);
+            const displayLabel = getTagLabel(tag);
+            const active = selectedTags.includes(submitValue);
+
+            return (
+              <button
+                key={submitValue}
+                type="button"
+                onClick={() => toggleTag(submitValue)}
+                className={`flex w-full items-center justify-between rounded-[18px] border px-4 py-4 text-left transition ${
+                  active
+                    ? "border-black bg-black text-white"
+                    : "border-[var(--line-soft)] bg-[var(--surface-solid)] text-[var(--text-main)]"
+                }`}
+              >
+                <div>
+                  <div className="text-[15px] font-semibold leading-6">
+                    {displayLabel}
+                  </div>
+                  <div
+                    className={`text-xs ${
+                      active ? "text-white/80" : "text-[var(--text-muted-2)]"
+                    }`}
+                  >
+                    Choose one main role
+                  </div>
+                </div>
+
+                <div
+                  className={`flex h-6 w-6 items-center justify-center rounded-full border ${
+                    active
+                      ? "border-white bg-white text-black"
+                      : "border-[var(--line-soft)] text-transparent"
+                  }`}
+                >
+                  <Icon
+                    icon="material-symbols:check-rounded"
+                    width="16"
+                    height="16"
+                  />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+
+    if (isDomainField(field)) {
+      return (
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          {tags.map((tag) => {
+            const submitValue = getTagSubmitValue(tag);
+            const displayLabel = getTagLabel(tag);
+            const active = selectedTags.includes(submitValue);
+
+            return (
+              <button
+                key={submitValue}
+                type="button"
+                onClick={() => toggleTag(submitValue)}
+                className={`min-h-[88px] rounded-[18px] border px-4 py-4 text-left transition ${
+                  active
+                    ? "border-black bg-black text-white"
+                    : "border-[var(--line-soft)] bg-[var(--surface-solid)] text-[var(--text-main)]"
+                }`}
+              >
+                <div className="flex h-full flex-col justify-between">
+                  <div className="text-[14px] font-semibold leading-5">
+                    {displayLabel}
+                  </div>
+                  <div
+                    className={`mt-3 text-xs ${
+                      active ? "text-white/80" : "text-[var(--text-muted-2)]"
+                    }`}
+                  >
+                    {active ? "Selected" : "Tap to select"}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+
+    if (isRoleField(field) && field === "roles") {
+      return (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {tags.map((tag) => {
+            const submitValue = getTagSubmitValue(tag);
+            const displayLabel = getTagLabel(tag);
+            const active = selectedTags.includes(submitValue);
+
+            return (
+              <button
+                key={submitValue}
+                type="button"
+                onClick={() => toggleTag(submitValue)}
+                className={`rounded-full border px-3 py-2 text-sm font-medium transition ${
+                  active
+                    ? "border-black bg-black text-white"
+                    : "border-[var(--line-soft)] bg-transparent text-[var(--text-main)]"
+                }`}
+              >
+                {displayLabel}
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+
+    return (
+      <div className="mt-4 flex flex-wrap gap-2">
+        {tags.map((tag) => {
+          const submitValue = getTagSubmitValue(tag);
+          const displayLabel = getTagLabel(tag);
+          const active = selectedTags.includes(submitValue);
+
+          return (
+            <button
+              key={submitValue}
+              type="button"
+              onClick={() => toggleTag(submitValue)}
+              className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+                active
+                  ? "border-black bg-black text-white"
+                  : "border-[var(--line-soft)] bg-transparent text-[var(--text-main)]"
+              }`}
+            >
+              {displayLabel}
+            </button>
+          );
+        })}
+      </div>
+    );
   }
 
   return (
@@ -382,7 +619,7 @@ export default function ProfileBuilderPage() {
                   />
                 </div>
 
-                <div className="max-w-[78%]">
+                <div className="max-w-[82%]">
                   {m.kind === "intro" || m.kind === "botText" ? (
                     <div className="break-words rounded-[20px] rounded-bl-md border border-[var(--line-soft)] bg-[var(--surface-solid)] px-4 py-3 text-[15px] leading-6 text-[var(--text-main)] shadow-sm">
                       {m.text}
@@ -399,30 +636,7 @@ export default function ProfileBuilderPage() {
                         </div>
                       )}
 
-                      {m.tags && m.tags.length > 0 ? (
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          {m.tags.map((tag) => {
-                            const submitValue = getTagSubmitValue(tag);
-                            const displayLabel = getTagLabel(tag);
-                            const active = selectedTags.includes(submitValue);
-
-                            return (
-                              <button
-                                key={submitValue}
-                                type="button"
-                                onClick={() => toggleTag(submitValue)}
-                                className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
-                                  active
-                                    ? "border-black bg-black text-white"
-                                    : "border-[var(--line-soft)] bg-transparent text-[var(--text-main)]"
-                                }`}
-                              >
-                                {displayLabel}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ) : null}
+                      {renderTagOptions(resolveTags(m.field, m.tags), m.field)}
 
                       {m.optional ? (
                         <div className="mt-3 text-xs text-[var(--text-muted-2)]">
@@ -441,8 +655,6 @@ export default function ProfileBuilderPage() {
               {pageError}
             </div>
           ) : null}
-
-          <div ref={bottomRef} />
         </div>
       </div>
 

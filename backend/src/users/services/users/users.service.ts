@@ -466,7 +466,7 @@ export class UsersService {
             throw new NotFoundException('User domain not found');
         }
 
-        // Capture ID before delete (though we have it in var)
+        // Capture ID before delete
         canonicalDomainId = userDomain.domainId;
 
         await this.userDomainRepo.remove(userDomain);
@@ -571,13 +571,8 @@ export class UsersService {
 
     // ============================================
     // Service Functions for Cross-Module Access
-    // (Microservice-Ready Architecture)
     // ============================================
 
-    /**
-     * Check if an account is private
-     * Used by: PostsModule (FeedService)
-     */
     async isAccountPrivate(userId: string): Promise<boolean> {
         const identity = await this.identityRepo.findOne({
             where: { id: userId },
@@ -587,10 +582,6 @@ export class UsersService {
         return identity?.isPrivate || false;
     }
 
-    /**
-     * Get account privacy status for multiple users
-     * Used by: PostsModule (FeedService) for batch operations
-     */
     async getAccountPrivacy(userIds: string[]): Promise<Map<string, boolean>> {
         const identities = await this.identityRepo.find({
             where: { id: In(userIds) },
@@ -613,132 +604,169 @@ export class UsersService {
         const profile = await this.getUserProfileById(identityId);
 
         // 1. Update Primary Role
-        if (onboardingData.primaryRole) {
+        if (onboardingData.primaryRole && typeof onboardingData.primaryRole === 'string') {
             try {
-                const roleName = onboardingData.primaryRole;
-                const role = await this.canonicalRoleService.findOrCreateCanonicalRole(
-                    roleName,
-                    undefined,
-                    identityId
-                );
-                profile.primaryRole = role;
-                // Also update legacy field for now
-                profile.currentPosition = role.name;
-                profile.primaryRoleId = role.id;
-            } catch (error) {
-                console.error('Failed to resolve primary role:', error);
+                const roleName = onboardingData.primaryRole.trim();
+
+                if (roleName) {
+                    const role = await this.canonicalRoleService.findOrCreateCanonicalRole(
+                        roleName,
+                        undefined,
+                        identityId,
+                    );
+
+                    if (role) {
+                        profile.primaryRole = role;
+                        profile.currentPosition = role.name;
+                        profile.primaryRoleId = role.id;
+                        console.log(`Saved primary role: ${roleName} -> ${role.name}`);
+                    } else {
+                        console.warn(`Primary role could not be resolved: ${roleName}`);
+                    }
+                }
+            } catch (error: any) {
+                console.error(`Failed to resolve primary role "${onboardingData.primaryRole}":`, error?.message || error);
             }
         }
 
         // 2. Update Secondary Roles
         if (onboardingData.roles && onboardingData.roles.length > 0) {
-            try {
-                if (!profile.userRoles) profile.userRoles = [];
+            if (!profile.userRoles) profile.userRoles = [];
 
-                for (const roleName of onboardingData.roles) {
-                    if (typeof roleName === 'string') {
-                        const role = await this.canonicalRoleService.findOrCreateCanonicalRole(
-                            roleName,
-                            undefined,
-                            identityId
-                        );
+            for (const roleNameRaw of onboardingData.roles) {
+                try {
+                    if (typeof roleNameRaw !== 'string') continue;
 
-                        // Check if UserRole exists in loaded profile or DB
-                        const existing = profile.userRoles.find(ur => ur.roleId === role.id) ||
-                            await this.userRoleRepo.findOne({
-                                where: {
-                                    userProfileId: profile.id,
-                                    roleId: role.id
-                                }
-                            });
+                    const roleName = roleNameRaw.trim();
+                    if (!roleName) continue;
 
-                        if (!existing) {
-                            const userRole = this.userRoleRepo.create({
-                                userProfileId: profile.id,
-                                roleId: role.id,
-                                userProfile: profile,
-                                role: role
-                            });
-                            profile.userRoles.push(userRole);
-                        }
+                    const role = await this.canonicalRoleService.findOrCreateCanonicalRole(
+                        roleName,
+                        undefined,
+                        identityId,
+                    );
+
+                    if (!role) {
+                        console.warn(`Secondary role could not be resolved: ${roleName}`);
+                        continue;
                     }
+
+                    const existing =
+                        profile.userRoles.find(ur => ur.roleId === role.id) ||
+                        await this.userRoleRepo.findOne({
+                            where: {
+                                userProfileId: profile.id,
+                                roleId: role.id
+                            }
+                        });
+
+                    if (!existing) {
+                        const userRole = this.userRoleRepo.create({
+                            userProfileId: profile.id,
+                            roleId: role.id,
+                            userProfile: profile,
+                            role: role
+                        });
+                        profile.userRoles.push(userRole);
+                    }
+
+                    console.log(`Saved onboarding secondary role: ${roleName} -> ${role.name}`);
+                } catch (error: any) {
+                    console.error(`Failed to resolve/save secondary role "${roleNameRaw}":`, error?.message || error);
                 }
-            } catch (error) {
-                console.error('Failed to resolve roles:', error);
             }
         }
 
         // 3. Update Domains
         if (onboardingData.domains && onboardingData.domains.length > 0) {
-            try {
-                if (!profile.userDomains) profile.userDomains = [];
+            if (!profile.userDomains) profile.userDomains = [];
 
-                for (const domainInput of onboardingData.domains) {
-                    if (typeof domainInput === 'string') {
-                        let domain: Domain | null = null;
+            for (const domainInputRaw of onboardingData.domains) {
+                try {
+                    if (typeof domainInputRaw !== 'string') continue;
 
-                        if (isUUID(domainInput)) {
-                            domain = await this.canonicalDomainService.getDomainById(domainInput);
-                        }
+                    const domainInput = domainInputRaw.trim();
+                    if (!domainInput) continue;
 
-                        if (!domain) {
-                            domain = await this.canonicalDomainService.findOrCreateCanonicalDomain(
-                                domainInput,
-                                undefined,
-                                identityId
-                            );
-                        }
+                    let domain: Domain | null = null;
 
-                        if (domain) {
-                            // Check if UserDomain exists
-                            const existing = profile.userDomains.find(ud => ud.domainId === domain.id) ||
-                                await this.userDomainRepo.findOne({
-                                    where: {
-                                        userProfileId: profile.id,
-                                        domainId: domain.id
-                                    }
-                                });
-
-                            if (!existing) {
-                                const userDomain = this.userDomainRepo.create({
-                                    userProfileId: profile.id,
-                                    domainId: domain.id,
-                                    userProfile: profile,
-                                    domain: domain
-                                });
-                                profile.userDomains.push(userDomain);
-                            }
-                        }
+                    if (isUUID(domainInput)) {
+                        domain = await this.canonicalDomainService.getDomainById(domainInput);
                     }
+
+                    if (!domain) {
+                        domain = await this.canonicalDomainService.findOrCreateCanonicalDomain(
+                            domainInput,
+                            undefined,
+                            identityId
+                        );
+                    }
+
+                    if (!domain) {
+                        console.warn(`Domain could not be resolved: ${domainInput}`);
+                        continue;
+                    }
+
+                    const existing =
+                        profile.userDomains.find(ud => ud.domainId === domain.id) ||
+                        await this.userDomainRepo.findOne({
+                            where: {
+                                userProfileId: profile.id,
+                                domainId: domain.id
+                            }
+                        });
+
+                    if (!existing) {
+                        const userDomain = this.userDomainRepo.create({
+                            userProfileId: profile.id,
+                            domainId: domain.id,
+                            userProfile: profile,
+                            domain: domain
+                        });
+                        profile.userDomains.push(userDomain);
+                    }
+
+                    console.log(`Saved onboarding domain: ${domainInput} -> ${domain.name}`);
+                } catch (error: any) {
+                    console.error(`Failed to resolve/save domain "${domainInputRaw}":`, error?.message || error);
                 }
-            } catch (error) {
-                console.error('Failed to resolve domains:', error);
             }
         }
 
         // 4. Update Skills (Legacy + Structured)
         if (onboardingData.skills && onboardingData.skills.length > 0) {
-            try {
-                if (!profile.userSkills) profile.userSkills = [];
+            if (!profile.userSkills) profile.userSkills = [];
 
-                const skillInputs: any[] = [];
+            const skillInputs: Array<{ name: string; proficiency?: number; yearsExperience?: number }> = [];
 
-                if (typeof onboardingData.skills[0] === 'string') {
-                    // Simple string array
-                    for (const s of onboardingData.skills) {
-                        skillInputs.push({ name: s, proficiency: 3, yearsExperience: 0 }); // Default
-                    }
-                } else {
-                    // Detailed objects
-                    for (const s of onboardingData.skills) {
-                        skillInputs.push(s);
+            if (typeof onboardingData.skills[0] === 'string') {
+                for (const s of onboardingData.skills) {
+                    if (typeof s === 'string' && s.trim()) {
+                        skillInputs.push({
+                            name: s.trim(),
+                            proficiency: 3,
+                            yearsExperience: 0,
+                        });
                     }
                 }
+            } else {
+                for (const s of onboardingData.skills) {
+                    if (s?.name && typeof s.name === 'string' && s.name.trim()) {
+                        skillInputs.push({
+                            name: s.name.trim(),
+                            proficiency: s.proficiency,
+                            yearsExperience: s.yearsExperience,
+                        });
+                    }
+                }
+            }
 
-                // Process UserSkills
-                for (const input of skillInputs) {
+            for (const input of skillInputs) {
+                try {
                     let canonical: CanonicalSkill | null = null;
-                    const inputName = input.name;
+                    const inputName = input.name.trim();
+
+                    if (!inputName) continue;
 
                     if (isUUID(inputName)) {
                         canonical = await this.canonicalSkillService.getSkillById(inputName);
@@ -747,45 +775,45 @@ export class UsersService {
                     if (!canonical) {
                         canonical = await this.canonicalSkillService.findOrCreateCanonicalSkill(
                             inputName,
-                            undefined, // category
+                            undefined,
                             identityId
                         );
                     }
 
-                    if (canonical) {
-                        // Check if UserSkill exists to avoid duplicates
-                        let userSkill: UserSkill | null | undefined = profile.userSkills.find(us => us.canonicalSkillId === canonical.id);
-
-                        if (!userSkill) {
-                            userSkill = await this.userSkillRepo.findOne({
-                                where: {
-                                    userProfileId: profile.id,
-                                    canonicalSkillId: canonical.id
-                                }
-                            });
-                        }
-
-                        if (!userSkill) {
-                            userSkill = this.userSkillRepo.create({
-                                userProfileId: profile.id,
-                                canonicalSkillId: canonical.id,
-                                userProfile: profile,
-                                canonicalSkill: canonical
-                            });
-                            // Add to array so it gets saved via cascade
-                            profile.userSkills.push(userSkill);
-                        }
-
-                        // Update metadata
-                        userSkill.proficiency = input.proficiency || userSkill.proficiency || 3;
-                        userSkill.yearsExperience = input.yearsExperience || userSkill.yearsExperience || 0;
-
-                        // NOTE: If we are updating an existing skill that was loaded in profile.userSkills, 
-                        // the modification will be saved via cascade.
+                    if (!canonical) {
+                        console.warn(`Skill could not be resolved: ${inputName}`);
+                        continue;
                     }
+
+                    let userSkill =
+                        profile.userSkills.find(us => us.canonicalSkillId === canonical!.id) ||
+                        await this.userSkillRepo.findOne({
+                            where: {
+                                userProfileId: profile.id,
+                                canonicalSkillId: canonical.id
+                            }
+                        });
+
+                    if (!userSkill) {
+                        userSkill = this.userSkillRepo.create({
+                            userProfileId: profile.id,
+                            canonicalSkillId: canonical.id,
+                            userProfile: profile,
+                            canonicalSkill: canonical,
+                            proficiency: input.proficiency ?? 3,
+                            yearsExperience: input.yearsExperience ?? 0,
+                        });
+
+                        profile.userSkills.push(userSkill);
+                    } else {
+                        userSkill.proficiency = input.proficiency ?? userSkill.proficiency ?? 3;
+                        userSkill.yearsExperience = input.yearsExperience ?? userSkill.yearsExperience ?? 0;
+                    }
+
+                    console.log(`Saved onboarding skill: ${inputName} -> ${canonical.name}`);
+                } catch (error: any) {
+                    console.error(`Failed to resolve/save skill "${input?.name}":`, error?.message || error);
                 }
-            } catch (error) {
-                console.error('Failed to resolve skills:', error);
             }
         }
 
@@ -846,16 +874,13 @@ export class UsersService {
     private generateProfileSummary(profile: UserProfile): string {
         const parts: string[] = [];
 
-        // Add name and headline
         if (profile.headline) {
             parts.push(`${profile.firstname} ${profile.lastname} - ${profile.headline}`);
         } else {
             parts.push(`${profile.firstname} ${profile.lastname}`);
         }
 
-        // Add skills
         if (profile.userSkills && profile.userSkills.length > 0) {
-            // Need to load canonicalSkill relation if not loaded, but typically it is queried
             const skillsText = profile.userSkills
                 .map(s => {
                     const name = s.canonicalSkill ? s.canonicalSkill.name : 'Unknown Skill';
@@ -865,13 +890,11 @@ export class UsersService {
             parts.push(`Skills: ${skillsText}`);
         }
 
-        // Add domains
         if (profile.userDomains && profile.userDomains.length > 0) {
             const domainNames = profile.userDomains.map(d => d.domain?.name || 'Unknown');
             parts.push(`Domains: ${domainNames.join(', ')}`);
         }
 
-        // Add roles
         if (profile.userRoles && profile.userRoles.length > 0) {
             const roleNames = profile.userRoles.map(r => r.role?.name || 'Unknown');
             parts.push(`Roles: ${roleNames.join(', ')}`);
@@ -879,23 +902,19 @@ export class UsersService {
             parts.push(`Role: ${profile.primaryRole.name}`);
         }
 
-        // Add collaboration goals
         if (profile.collaborationGoals) {
             parts.push(`Goals: ${profile.collaborationGoals}`);
         }
 
-        // Add availability
         if (profile.availabilityHours) {
             parts.push(`Available: ${profile.availabilityHours} hours/week`);
         }
 
-        // Add Experience
         if (profile.experience && profile.experience.length > 0) {
             const expText = profile.experience.map(e => `${e.position} at ${e.company}`).join(', ');
             parts.push(`Experience: ${expText}`);
         }
 
-        // Add Education
         if (profile.education && profile.education.length > 0) {
             const eduText = profile.education.map(e => `${e.degree} from ${e.school}`).join(', ');
             parts.push(`Education: ${eduText}`);
@@ -904,4 +923,3 @@ export class UsersService {
         return parts.join('. ');
     }
 }
-

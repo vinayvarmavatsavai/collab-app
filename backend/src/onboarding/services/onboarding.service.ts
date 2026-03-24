@@ -169,13 +169,17 @@ export class OnboardingService {
         break;
       }
 
-      case 'domains':
-        profile.domains = this.hybridExtractor.extractDomains(input);
+      case 'domains': {
+        const extractedDomains = this.hybridExtractor.extractDomains(input);
+        profile.domains = [...new Set([...(profile.domains || []), ...extractedDomains])];
         break;
+      }
 
-      case 'skills':
-        profile.skills = this.hybridExtractor.extractSkills(input);
+      case 'skills': {
+        const extractedSkills = this.hybridExtractor.extractSkills(input);
+        profile.skills = [...new Set([...(profile.skills || []), ...extractedSkills])];
         break;
+      }
 
       case 'experience':
         profile.experience = this.hybridExtractor.extractExperience(input);

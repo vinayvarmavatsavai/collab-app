@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Domain } from '../entities/domain.entity';
 import { DomainAlias } from '../entities/domain-alias.entity';
@@ -39,49 +39,75 @@ export class CanonicalDomainService {
         parentDomainId?: string,
         userId?: string,
     ): Promise<Domain> {
-        // 0 — Safety gate: moderation (must be first)
         await this.moderationService.validateInput(input, userId, 'domain');
 
-        const normalized = this.normalizationService.normalizeSkill(input);
+        const raw = (input || '').trim();
+        const normalized = this.normalizationService.normalizeSkill(raw);
+
+        this.logger.log(`DOMAIN INPUT RECEIVED: ${raw}`);
+        this.logger.log(`DOMAIN NORMALIZED: ${normalized}`);
 
         if (!normalized || normalized.length < 2) {
             throw new Error('Invalid domain input: too short');
         }
 
-        // 1 — Exact match
+        // 1. Exact match by normalized name
         let domain = await this.domainRepo.findOne({
             where: { normalizedName: normalized },
         });
 
         if (domain) {
             await this.incrementUsageCount(domain.id);
-            this.logger.log(`Exact match: "${input}" -> "${domain.name}"`);
+            this.logger.log(`Exact normalized domain match: "${raw}" -> "${domain.name}"`);
             return domain;
         }
 
-        // 2 — Alias match
+        // 2. Exact match by actual name (case-insensitive)
+        domain = await this.domainRepo.findOne({
+            where: { name: ILike(raw) },
+        });
+
+        if (domain) {
+            await this.incrementUsageCount(domain.id);
+            this.logger.log(`Exact domain name match: "${raw}" -> "${domain.name}"`);
+            return domain;
+        }
+
+        // 3. Alias match by normalized alias
         const alias = await this.domainAliasRepo.findOne({
             where: { normalizedAlias: normalized },
             relations: ['domain'],
         });
 
-        if (alias) {
+        if (alias?.domain) {
             await this.incrementUsageCount(alias.domainId);
-            this.logger.log(`Alias match: "${input}" -> "${alias.domain.name}"`);
+            this.logger.log(`Alias domain match: "${raw}" -> "${alias.domain.name}"`);
             return alias.domain;
         }
 
-        // 3 — Rate limit check BEFORE creating new entries (including auto-merge aliases)
+        // 4. Alias match by actual alias text (case-insensitive)
+        const aliasByName = await this.domainAliasRepo.findOne({
+            where: { alias: ILike(raw) },
+            relations: ['domain'],
+        });
+
+        if (aliasByName?.domain) {
+            await this.incrementUsageCount(aliasByName.domainId);
+            this.logger.log(`Alias-by-name domain match: "${raw}" -> "${aliasByName.domain.name}"`);
+            return aliasByName.domain;
+        }
+
+        // 5. Rate limit before create
         if (userId) {
             await this.rateLimitService.checkAndIncrement(userId);
         }
 
-        // 4 — Deterministic Typo/Fuzzy Match (pg_trgm + levenshtein)
+        // 6. Fuzzy fallback
         const fuzzyThreshold = this.configService.get<number>('matching.canonical.fuzzyMatchThreshold') ?? 0.7;
         const maxLevenshtein = this.configService.get<number>('matching.canonical.maxLevenshteinDistance') ?? 2;
 
         const typoMatches = await this.domainRepo.manager.query(`
-            SELECT id, name, normalized_name, 
+            SELECT id, name, normalized_name,
                    similarity(normalized_name, $1) as sim,
                    levenshtein(normalized_name, $1) as dist
             FROM domains
@@ -93,7 +119,7 @@ export class CanonicalDomainService {
 
         let forcedReview = false;
         if (userId) {
-            const forcedReviewLevel: number = this.configService.get<number>('matching.risk.forcedReviewRiskLevel') ?? 2;
+            const forcedReviewLevel = this.configService.get<number>('matching.risk.forcedReviewRiskLevel') ?? 2;
             const userProfile = await this.getUserProfile(userId);
             forcedReview = userProfile ? userProfile.riskLevel >= forcedReviewLevel : false;
         }
@@ -103,39 +129,52 @@ export class CanonicalDomainService {
             const sim = parseFloat(typoMatch.sim);
             const dist = parseInt(typoMatch.dist, 10);
 
-            // Auto-merge if highly similar OR very low edit distance
             if (!forcedReview && (sim >= 0.8 || dist <= 1 || (normalized.length > 5 && dist <= 2))) {
-                this.logger.log(`Typo/Fuzzy match: "${input}" -> "${typoMatch.name}" (sim=${sim.toFixed(2)}, dist=${dist})`);
-                await this.createAlias(typoMatch.id, input, normalized);
+                this.logger.log(`Typo/Fuzzy domain match: "${raw}" -> "${typoMatch.name}" (sim=${sim.toFixed(2)}, dist=${dist})`);
+                await this.createAlias(typoMatch.id, raw, normalized);
                 await this.incrementUsageCount(typoMatch.id);
+
                 const matchEntity = await this.domainRepo.findOne({ where: { id: typoMatch.id } });
                 if (matchEntity) return matchEntity;
             } else if (sim >= fuzzyThreshold || dist <= 2 || forcedReview) {
-                this.logger.warn(`Typo review: "${input}" ~ "${typoMatch.name}" (sim=${sim.toFixed(2)}, dist=${dist}, forcedReview=${forcedReview})`);
+                this.logger.warn(`Typo review domain: "${raw}" ~ "${typoMatch.name}" (sim=${sim.toFixed(2)}, dist=${dist}, forcedReview=${forcedReview})`);
+
                 const newDomain = await this.createCanonicalDomain(
-                    input, normalized, parentDomainId,
-                    undefined, false, 1,
+                    raw,
+                    normalized,
+                    parentDomainId,
+                    undefined,
+                    false,
+                    1,
                 );
+
                 if (userId) {
                     newDomain.createdByUserId = userId;
                     await this.domainRepo.save(newDomain);
                 }
-                await this.queueForReview(input, normalized, typoMatch.id, sim >= 0.95 ? sim : 0.95, userId);
+
+                await this.queueForReview(raw, normalized, typoMatch.id, sim >= 0.95 ? sim : 0.95, userId);
                 return newDomain;
             }
         }
 
-        // 5 — No match — create new USER_GENERATED canonical
-        this.logger.log(`Creating new user-generated domain: "${input}"`);
+        // 7. Final fallback: create new canonical domain
+        this.logger.log(`Creating new user-generated domain: "${raw}"`);
+
         const newDomain = await this.createCanonicalDomain(
-            input, normalized,
+            raw,
+            normalized,
             parentDomainId,
-            undefined, false, 1,
+            undefined,
+            false,
+            1,
         );
+
         if (userId) {
             newDomain.createdByUserId = userId;
             await this.domainRepo.save(newDomain);
         }
+
         return newDomain;
     }
 
@@ -182,31 +221,24 @@ export class CanonicalDomainService {
 
         try {
             return await this.domainAliasRepo.save(domainAlias);
-        } catch (error) {
+        } catch {
             return await this.domainAliasRepo.findOne({ where: { normalizedAlias } }) || domainAlias;
         }
     }
 
-    /**
-     * @deprecated Use getSuggestions() which now uses vector ANN internally.
-     */
     async findFuzzyMatch(normalized: string, _threshold = 0.4): Promise<DomainSuggestion | null> {
         const results = await this.getVectorSuggestions(normalized, 1);
         return results.length > 0 ? results[0] : null;
     }
 
-    /**
-     * Vector-based domain autocomplete: prefix LIKE + semantic ANN.
-     */
     async getSuggestions(query: string, limit = 10, requestingUserId?: string): Promise<DomainSuggestion[]> {
         const normalized = this.normalizationService.normalizeSkill(query);
-        const minUsage: number = this.configService.get<number>('matching.canonical.quarantineMinUsage') ?? 50;
+        const minUsage = this.configService.get<number>('matching.canonical.quarantineMinUsage') ?? 50;
 
         if (!normalized || normalized.length < 2) {
             return await this.getPopularDomains(limit);
         }
 
-        // Fast prefix matches (trusted entries only)
         const prefixMatches = await this.domainRepo
             .createQueryBuilder('domain')
             .where('domain.normalized_name LIKE :query', { query: `${normalized}%` })
@@ -224,7 +256,6 @@ export class CanonicalDomainService {
             return prefixMatches.map(domain => ({ domain, similarity: 1.0, matchType: 'exact' as const }));
         }
 
-        // Vector ANN for remaining slots (trusted only)
         const vectorResults = await this.getVectorSuggestions(query, limit + prefixMatches.length, requestingUserId);
         const prefixIds = new Set(prefixMatches.map(d => d.id));
         const semantic = vectorResults.filter(r => !prefixIds.has(r.domain.id)).slice(0, limit - prefixMatches.length);
@@ -290,21 +321,14 @@ export class CanonicalDomainService {
         await this.domainRepo.increment({ id: domainId }, 'usageCount', 1);
     }
 
-    /**
-     * Decrement usage count and delete if unused and user-generated
-     */
     async decrementUsageCount(domainId: string): Promise<void> {
         const domain = await this.domainRepo.findOne({ where: { id: domainId } });
 
         if (!domain) return;
 
-        // Decrement
         domain.usageCount = Math.max(0, domain.usageCount - 1);
 
-        if (
-            domain.usageCount === 0 &&
-            !domain.isVerified
-        ) {
+        if (domain.usageCount === 0 && !domain.isVerified) {
             await this.domainRepo.remove(domain);
             this.logger.log(`Deleted unused user-generated domain: "${domain.name}"`);
         } else {
@@ -316,13 +340,12 @@ export class CanonicalDomainService {
         return this.getSuggestions(query, limit);
     }
 
-    /** Internal: vector ANN suggestions */
     private async getVectorSuggestions(query: string, limit: number, requestingUserId?: string): Promise<DomainSuggestion[]> {
         const emb = await this.embeddingService.generateEmbedding(query);
         if (!emb) return [];
 
-        const minUsage: number = this.configService.get<number>('matching.canonical.quarantineMinUsage') ?? 50;
-        const minSim: number = this.configService.get<number>('matching.canonical.suggestionMinSimilarity') ?? 0.50;
+        const minUsage = this.configService.get<number>('matching.canonical.quarantineMinUsage') ?? 50;
+        const minSim = this.configService.get<number>('matching.canonical.suggestionMinSimilarity') ?? 0.50;
         const embStr = JSON.stringify(emb);
 
         const results = await this.domainRepo
@@ -347,7 +370,6 @@ export class CanonicalDomainService {
         }));
     }
 
-
     private async queueForReview(
         rawInput: string,
         normalizedInput: string,
@@ -367,7 +389,7 @@ export class CanonicalDomainService {
 
             await this.domainReviewQueueRepo.save(queueItem);
             this.logger.log(`Queued domain for review: "${rawInput}" (similarity: ${fuzzySimilarity})`);
-        } catch (error) {
+        } catch (error: any) {
             this.logger.error(`Failed to queue domain for review: ${error.message}`);
         }
     }
@@ -421,9 +443,7 @@ export class CanonicalDomainService {
     async verifyDomain(domainId: string): Promise<void> {
         await this.domainRepo.update(
             { id: domainId },
-            {
-                isVerified: true,
-            }
+            { isVerified: true }
         );
     }
 
@@ -442,10 +462,6 @@ export class CanonicalDomainService {
         this.logger.log(`Merged domain "${target.name}" into "${destination.name}" by admin ${adminId}`);
     }
 
-    /**
-     * Completely deletes a canonical domain (Admin Action).
-     * This will CASCADE delete all UserDomains that reference this domain_id.
-     */
     async deleteDomain(domainId: string, adminId: string): Promise<void> {
         const domain = await this.domainRepo.findOne({ where: { id: domainId } });
         if (!domain) {
@@ -460,7 +476,6 @@ export class CanonicalDomainService {
         return await this.domainRepo.findOne({ where: { id } });
     }
 
-    /** @deprecated Delegated to CanonicalRateLimitService */
     private async checkRateLimit(_userId: string): Promise<void> { /* no-op */ }
 
     private async getUserProfile(userId: string): Promise<{ riskLevel: number } | null> {
