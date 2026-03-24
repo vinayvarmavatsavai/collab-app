@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "../navigation/Header";
 import BottomNav from "../navigation/BottomNav";
+import { apiRequest } from "@/lib/api";
+import { getAccessToken } from "@/lib/auth";
 
 type FooterTab = "home" | "explore" | "create" | "events" | "profile";
 
@@ -20,25 +22,83 @@ type HistoryItem = {
   date: string;
 };
 
-const milestoneByYear: Record<number, Milestone[]> = {
-  2026: [
-    { title: "Autonomous Drone Vision", status: "Completed", tags: ["Milestone", "Completed"] },
-    { title: "Model Compression Pipeline", status: "In progress", tags: ["Milestone", "In progress"] },
-  ],
-  2025: [
-    { title: "Edge Inference Benchmarking", status: "Completed", tags: ["Milestone", "Completed"] },
-    { title: "Robotics Sensor Fusion", status: "Completed", tags: ["Milestone", "Completed"] },
-  ],
-  2024: [{ title: "Deployment Playbook v1", status: "Completed", tags: ["Milestone", "Completed"] }],
+type UserProfileResponse = {
+  id?: string;
+  firstname?: string;
+  lastname?: string;
+  phone?: string;
+  intent?: string;
+  headline?: string;
+  bio?: string;
+  location?: string;
+  profilePicture?: string;
+  coverPhoto?: string;
+  website?: string;
+  currentCompany?: string;
+  currentPosition?: string;
+  experience?: Array<{
+    id?: string;
+    company?: string;
+    position?: string;
+    startDate?: string;
+    endDate?: string;
+    current?: boolean;
+    description?: string;
+    location?: string;
+  }>;
+  education?: Array<{
+    id?: string;
+    school?: string;
+    degree?: string;
+    field?: string;
+    startYear?: string;
+    endYear?: string;
+    description?: string;
+  }>;
+  certifications?: Array<{
+    id?: string;
+    name?: string;
+    issuer?: string;
+    issueDate?: string;
+    expiryDate?: string;
+    credentialId?: string;
+    credentialUrl?: string;
+  }>;
+  languages?: string[];
+  profileCompleteness?: number;
+  isProfilePublic?: boolean;
+  onboardingCompleted?: boolean;
+  projects?: Array<{
+    title?: string;
+    description?: string;
+    role?: string;
+    technologies?: string[];
+    duration?: string;
+  }>;
+  collaborationGoals?: string;
+  availabilityHours?: number;
+  profileSummaryText?: string;
+  skills?: string[];
+  domains?: string[];
+  userSkills?: Array<{
+    id?: string;
+    skill?: {
+      id?: string;
+      name?: string;
+    };
+    canonicalSkill?: {
+      id?: string;
+      name?: string;
+    };
+    name?: string;
+  }>;
 };
 
-const historyData: HistoryItem[] = [
-  { title: "AI Model Optimization", role: "Contributor • Milestones", status: "Completed", date: "Jan 2026" },
-  { title: "Prototype Review Sprint", role: "Reviewer • Advisory", status: "Completed", date: "Oct 2025" },
-  { title: "Sensor Fusion Audit", role: "Advisor • Robotics", status: "Completed", date: "May 2025" },
-];
-
-const skillsData = ["UI/UX", "Figma", "React", "Next.js", "Node.js", "MongoDB"];
+type ProfileCompletenessResponse = {
+  profileCompleteness?: number;
+  completeness?: number;
+  percentage?: number;
+};
 
 type ProfileInfo = {
   name: string;
@@ -46,6 +106,61 @@ type ProfileInfo = {
   location: string;
   avatarUrl?: string;
 };
+
+const milestoneByYear: Record<number, Milestone[]> = {
+  2026: [
+    {
+      title: "Autonomous Drone Vision",
+      status: "Completed",
+      tags: ["Milestone", "Completed"],
+    },
+    {
+      title: "Model Compression Pipeline",
+      status: "In progress",
+      tags: ["Milestone", "In progress"],
+    },
+  ],
+  2025: [
+    {
+      title: "Edge Inference Benchmarking",
+      status: "Completed",
+      tags: ["Milestone", "Completed"],
+    },
+    {
+      title: "Robotics Sensor Fusion",
+      status: "Completed",
+      tags: ["Milestone", "Completed"],
+    },
+  ],
+  2024: [
+    {
+      title: "Deployment Playbook v1",
+      status: "Completed",
+      tags: ["Milestone", "Completed"],
+    },
+  ],
+};
+
+const historyData: HistoryItem[] = [
+  {
+    title: "AI Model Optimization",
+    role: "Contributor • Milestones",
+    status: "Completed",
+    date: "Jan 2026",
+  },
+  {
+    title: "Prototype Review Sprint",
+    role: "Reviewer • Advisory",
+    status: "Completed",
+    date: "Oct 2025",
+  },
+  {
+    title: "Sensor Fusion Audit",
+    role: "Advisor • Robotics",
+    status: "Completed",
+    date: "May 2025",
+  },
+];
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -59,17 +174,105 @@ export default function ProfilePage() {
   const [historyShown, setHistoryShown] = useState(1);
   const [footerTab, setFooterTab] = useState<FooterTab>("profile");
 
-  const [profile] = useState<ProfileInfo>({
-    name: "Rahul",
-    role: "Builder • Startups • Collaboration",
-    location: "India",
+  const [profile, setProfile] = useState<ProfileInfo>({
+    name: "Loading...",
+    role: "Loading profile...",
+    location: "Loading...",
     avatarUrl: "/avatar/default-avatar.png",
   });
+
+  const [skillsData, setSkillsData] = useState<string[]>([]);
+  const [profileCompleteness, setProfileCompleteness] = useState<number>(20);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const go = (path: string, ftab?: FooterTab) => {
     if (ftab) setFooterTab(ftab);
     router.push(path);
   };
+
+  useEffect(() => {
+    const token = getAccessToken();
+    if (!token) {
+      router.replace("/auth/login");
+      return;
+    }
+
+    async function fetchProfile() {
+      try {
+        setIsLoading(true);
+        setError("");
+
+        const [profileResponse, completenessResponse] = await Promise.all([
+          apiRequest<UserProfileResponse>("/users/me/profile", {
+            method: "GET",
+            token,
+          }),
+          apiRequest<ProfileCompletenessResponse>(
+            "/users/me/profile/completeness",
+            {
+              method: "GET",
+              token,
+            }
+          ).catch(() => ({ profileCompleteness: 20 })),
+        ]);
+
+        const fullName =
+          `${profileResponse.firstname ?? ""} ${profileResponse.lastname ?? ""}`.trim() ||
+          "User";
+
+        const roleText =
+          profileResponse.headline ||
+          [
+            profileResponse.currentPosition,
+            profileResponse.currentCompany,
+          ]
+            .filter(Boolean)
+            .join(" • ") ||
+          profileResponse.intent ||
+          "Builder • Collaboration";
+
+        const locationText = profileResponse.location || "Location not added";
+
+        setProfile({
+          name: fullName,
+          role: roleText,
+          location: locationText,
+          avatarUrl:
+            profileResponse.profilePicture || "/avatar/default-avatar.png",
+        });
+
+        const normalizedSkills =
+          profileResponse.userSkills?.map((item) => {
+            return (
+              item?.canonicalSkill?.name ||
+              item?.skill?.name ||
+              item?.name ||
+              ""
+            );
+          }).filter(Boolean) ||
+          profileResponse.skills ||
+          [];
+
+        setSkillsData(normalizedSkills);
+
+        setProfileCompleteness(
+          completenessResponse.profileCompleteness ??
+            completenessResponse.completeness ??
+            completenessResponse.percentage ??
+            profileResponse.profileCompleteness ??
+            20
+        );
+      } catch (err) {
+        console.error("Failed to load profile", err);
+        setError("Failed to load profile.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    void fetchProfile();
+  }, [router]);
 
   const milestones = milestoneByYear[activeYear] || [];
   const shownHistory = historyData.slice(0, historyShown);
@@ -80,14 +283,37 @@ export default function ProfilePage() {
       .flat()
       .filter((m) => m.status === "Completed").length;
 
-    const historyCompleted = historyData.filter((h) => h.status === "Completed").length;
+    const historyCompleted = historyData.filter(
+      (h) => h.status === "Completed"
+    ).length;
+
     const skillsCount = skillsData.length;
 
     return Math.min(
       100,
       40 + completedMilestones * 8 + historyCompleted * 6 + Math.min(skillsCount, 8) * 2
     );
-  }, []);
+  }, [skillsData]);
+
+  if (isLoading) {
+    return (
+      <div className="sync-theme-page min-h-screen pb-24">
+        <Header
+          title="Profile"
+          subtitle="Credibility • milestones • history"
+          variant="profile"
+        />
+        <div className="mx-auto w-full max-w-[480px] px-4 py-5">
+          <div className="rounded-[28px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 shadow-sm">
+            <div className="text-sm text-[var(--text-muted-2)]">
+              Loading profile...
+            </div>
+          </div>
+        </div>
+        <BottomNav />
+      </div>
+    );
+  }
 
   return (
     <div className="sync-theme-page min-h-screen pb-24">
@@ -97,18 +323,26 @@ export default function ProfilePage() {
         variant="profile"
       />
 
-      <div className="mx-auto w-full max-w-[480px] px-4 py-5 space-y-5">
+      <div className="mx-auto w-full max-w-[480px] space-y-5 px-4 py-5">
+        {error ? (
+          <div className="rounded-[22px] border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        ) : null}
+
         <div className="rounded-[28px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 shadow-sm">
           <div className="flex items-start gap-4">
             <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full border border-[var(--line-soft)] bg-[var(--muted)]">
-              <img
-                src={profile.avatarUrl || "/avatar/default-avatar.png"}
-                alt="Profile"
-                className="h-full w-full object-cover"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).style.display = "none";
-                }}
-              />
+              {profile.avatarUrl ? (
+                <img
+                  src={profile.avatarUrl}
+                  alt="Profile"
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.display = "none";
+                  }}
+                />
+              ) : null}
               <div className="flex h-full w-full items-center justify-center text-[1.6rem] font-bold text-[var(--text-main)]">
                 {profile.name?.slice(0, 1).toUpperCase()}
               </div>
@@ -140,19 +374,19 @@ export default function ProfilePage() {
 
               <div className="rounded-[22px] bg-[var(--muted)] px-2.5 py-3 text-center">
                 <div className="text-[1.5rem] font-extrabold leading-none text-[var(--text-main)]">
-                  {Object.values(milestoneByYear).flat().length}
+                  {profileCompleteness}
                 </div>
                 <div className="mt-1.5 text-[11px] text-[var(--text-muted-2)]">
-                  Milestones
+                  Complete %
                 </div>
               </div>
 
               <div className="rounded-[22px] bg-[var(--muted)] px-2.5 py-3 text-center">
                 <div className="text-[1.5rem] font-extrabold leading-none text-[var(--text-main)]">
-                  {historyData.length}
+                  {skillsData.length}
                 </div>
                 <div className="mt-1.5 text-[11px] text-[var(--text-muted-2)]">
-                  History
+                  Skills
                 </div>
               </div>
             </div>
@@ -160,8 +394,12 @@ export default function ProfilePage() {
         </div>
 
         <div className="flex items-center justify-between">
-          <h3 className="text-[1.15rem] font-bold text-[var(--text-main)]">Milestones</h3>
-          <span className="text-sm text-[var(--text-muted-2)]">Credibility timeline</span>
+          <h3 className="text-[1.15rem] font-bold text-[var(--text-main)]">
+            Milestones
+          </h3>
+          <span className="text-sm text-[var(--text-muted-2)]">
+            Credibility timeline
+          </span>
         </div>
 
         <div className="flex gap-2 overflow-x-auto pb-1">
@@ -191,7 +429,9 @@ export default function ProfilePage() {
               className="rounded-[26px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 shadow-sm"
             >
               <div className="flex items-start justify-between gap-3">
-                <div className="font-semibold text-[var(--text-main)]">{m.title}</div>
+                <div className="font-semibold text-[var(--text-main)]">
+                  {m.title}
+                </div>
                 <span
                   className={[
                     "rounded-full px-3 py-1 text-xs font-semibold",
@@ -219,7 +459,9 @@ export default function ProfilePage() {
         </div>
 
         <div className="flex items-center justify-between pt-1">
-          <h3 className="text-[1.15rem] font-bold text-[var(--text-main)]">Collaboration History</h3>
+          <h3 className="text-[1.15rem] font-bold text-[var(--text-main)]">
+            Collaboration History
+          </h3>
           <button className="text-sm font-semibold text-[var(--text-muted-2)]">
             Timeline
           </button>
@@ -231,7 +473,9 @@ export default function ProfilePage() {
               key={idx}
               className="rounded-[26px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 shadow-sm"
             >
-              <div className="font-semibold text-[var(--text-main)]">{h.title}</div>
+              <div className="font-semibold text-[var(--text-main)]">
+                {h.title}
+              </div>
               <div className="mt-1 text-sm text-[var(--text-muted-2)]">
                 {h.role} • {h.status} • {h.date}
               </div>
@@ -241,7 +485,9 @@ export default function ProfilePage() {
 
         {canLoadMore && (
           <button
-            onClick={() => setHistoryShown((v) => Math.min(v + 1, historyData.length))}
+            onClick={() =>
+              setHistoryShown((v) => Math.min(v + 1, historyData.length))
+            }
             className="h-12 w-full rounded-[22px] border border-[var(--line-soft)] bg-[var(--surface-solid)] font-bold text-[var(--text-main)] shadow-sm"
           >
             Load more
@@ -249,7 +495,9 @@ export default function ProfilePage() {
         )}
 
         <div className="flex items-center justify-between pt-1">
-          <h3 className="text-[1.15rem] font-bold text-[var(--text-main)]">Skills</h3>
+          <h3 className="text-[1.15rem] font-bold text-[var(--text-main)]">
+            Skills
+          </h3>
           <button className="text-sm font-semibold text-[var(--text-muted-2)]">
             Tags
           </button>
@@ -257,14 +505,20 @@ export default function ProfilePage() {
 
         <div className="rounded-[26px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 shadow-sm">
           <div className="flex flex-wrap gap-2">
-            {skillsData.map((s) => (
-              <span
-                key={s}
-                className="rounded-full bg-[var(--muted)] px-3 py-1.5 text-xs font-medium text-[var(--text-main)]"
-              >
-                {s}
+            {skillsData.length > 0 ? (
+              skillsData.map((s) => (
+                <span
+                  key={s}
+                  className="rounded-full bg-[var(--muted)] px-3 py-1.5 text-xs font-medium text-[var(--text-main)]"
+                >
+                  {s}
+                </span>
+              ))
+            ) : (
+              <span className="text-sm text-[var(--text-muted-2)]">
+                No skills added yet.
               </span>
-            ))}
+            )}
           </div>
         </div>
 

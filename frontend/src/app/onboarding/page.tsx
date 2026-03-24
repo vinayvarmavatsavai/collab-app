@@ -1,116 +1,178 @@
-// file: src/app/onboarding/profile-builder/page.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@iconify/react";
-
-type Question = {
-  id: string;
-  ask: string;
-  helper?: string;
-  example?: string;
-};
+import { getStoredIdentity } from "@/lib/auth";
+import {
+  answerOnboarding,
+  skipOnboarding,
+  startOnboarding,
+  syncOnboardingToProfile,
+  type OnboardingQuestionResponse,
+  type TagSuggestion,
+} from "@/lib/onboarding";
 
 type Msg =
   | { id: string; kind: "intro"; text: string }
   | { id: string; kind: "botText"; text: string }
-  | { id: string; kind: "botQuestion"; title: string; helper?: string; example?: string }
+  | {
+      id: string;
+      kind: "botQuestion";
+      title: string;
+      helper?: string;
+      field?: string;
+      tags?: TagSuggestion[];
+      optional?: boolean;
+      step?: number;
+      totalSteps?: number;
+    }
   | { id: string; kind: "user"; text: string };
 
 function uid(prefix = "m") {
   return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now()}`;
 }
 
-const QUESTIONS: Question[] = [
-  {
-    id: "about",
-    ask: "Tell me brief about yourself, your goals and aspects.",
-    helper: "Keep it short (3–5 lines).",
-    example:
-      "Example: I’m a final-year student focused on full-stack, aiming to build collaboration tools for universities.",
-  },
-  {
-    id: "built",
-    ask: "What have you built?",
-    helper:
-      "List 1–3 projects you have worked on. Briefly describe what you built and your role.",
-    example:
-      "Example: Built a task tracker — I owned UI, auth, and API integration.",
-  },
-  {
-    id: "tools",
-    ask: "What tools / technologies have you actually used?",
-    helper:
-      "Mention tools, frameworks, or technologies you’ve worked with hands-on.",
-    example:
-      "Example: React, Node.js, and Firebase for a mobile app project.",
-  },
-  {
-    id: "innovate",
-    ask: "What are you looking to innovate in next?",
-    helper:
-      "What problem area or domain do you want to innovate in over the next year?",
-    example:
-      "Example: Student collaboration, creator tools, career growth systems.",
-  },
-  {
-    id: "collaborators",
-    ask: "What kind of collaborators are you looking for?",
-    helper:
-      "When you start or join a project, what kind of expertise do you usually need?",
-    example:
-      "Example: UI/UX + backend + growth/content.",
-  },
-];
+function fieldHelper(field: string) {
+  switch (field) {
+    case "primary_role":
+      return "Choose your main role, or type your own.";
+    case "roles":
+      return "Add any additional roles if relevant.";
+    case "domains":
+      return "Select the areas you work in.";
+    case "skills":
+      return "Select your strongest skills, or type custom ones.";
+    case "interests":
+      return "Share what interests you most.";
+    case "availability":
+      return "Choose your availability, or type your own.";
+    default:
+      return "";
+  }
+}
 
-const SCRIPT_AFTER_INNOVATE =
-  "I know you are a passionate builder looking to contribute to a lot of varied problem statements, but to help me understand your skills and aspirations clearly, I want a clear set of immediate goals.";
+function getTagLabel(tag: TagSuggestion): string {
+  const maybeLabel =
+    (tag as TagSuggestion & { label?: string }).label ||
+    (tag as TagSuggestion & { name?: string }).name ||
+    tag.value;
 
-const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+  return maybeLabel;
+}
+
+function getTagSubmitValue(tag: TagSuggestion): string {
+  return tag.value;
+}
+
+function selectionToText(
+  selectedValues: string[],
+  selectedLabels: string[],
+  textInput: string
+) {
+  const tagPart = selectedLabels.join(", ");
+  const textPart = textInput.trim();
+
+  if (tagPart && textPart) return `${tagPart} | ${textPart}`;
+  if (tagPart) return tagPart;
+  if (textPart) return textPart;
+  return selectedValues.join(", ");
+}
+
+function isCompleteResponse(
+  value: unknown
+): value is { complete: true; profile: unknown; completenessPercentage: number } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "complete" in value &&
+    (value as { complete?: boolean }).complete === true
+  );
+}
 
 export default function ProfileBuilderPage() {
   const router = useRouter();
 
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [input, setInput] = useState("");
-  const [qIndex, setQIndex] = useState(0);
   const [done, setDone] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
+  const [pageError, setPageError] = useState("");
+  const [currentQuestion, setCurrentQuestion] =
+    useState<OnboardingQuestionResponse | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
 
-  const total = QUESTIONS.length;
-
-  const [messages, setMessages] = useState<Msg[]>(() => [
+  const [messages, setMessages] = useState<Msg[]>([
     {
       id: uid(),
       kind: "intro",
-      text: "Profile setup — answer a few questions to build your public SphereNet profile.",
-    },
-    {
-      id: uid(),
-      kind: "botQuestion",
-      title: QUESTIONS[0].ask,
-      helper: QUESTIONS[0].helper,
-      example: QUESTIONS[0].example,
+      text: "Profile setup — answer a few guided questions to build your public SphereNet profile.",
     },
   ]);
 
-  const activeStep = useMemo(
-    () => (done ? total : Math.min(qIndex + 1, total)),
-    [done, qIndex, total]
-  );
+  const activeStep = useMemo(() => {
+    if (done && currentQuestion?.totalSteps) return currentQuestion.totalSteps;
+    return currentQuestion?.step ?? 1;
+  }, [done, currentQuestion]);
+
+  const totalSteps = currentQuestion?.totalSteps ?? 6;
+
+  const selectedTagLabels = useMemo(() => {
+    const tags = currentQuestion?.tags || [];
+    const labelMap = new Map<string, string>();
+
+    tags.forEach((tag) => {
+      labelMap.set(getTagSubmitValue(tag), getTagLabel(tag));
+    });
+
+    return selectedTags.map((value) => labelMap.get(value) || value);
+  }, [currentQuestion, selectedTags]);
 
   useEffect(() => {
-    const signupCompleted = localStorage.getItem("signupCompleted") === "true";
+    const identity = getStoredIdentity();
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
 
-    if (!signupCompleted) {
-      router.replace("/");
+    if (!identity || !token) {
+      router.replace("/auth/login");
+      return;
     }
+
+    if (identity.onboardingCompleted) {
+      router.replace("/home");
+      return;
+    }
+
+    async function init() {
+      try {
+        const result = await startOnboarding();
+
+        setCurrentQuestion(result);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: uid(),
+            kind: "botQuestion",
+            title: result.question,
+            helper: fieldHelper(result.field),
+            field: result.field,
+            tags: result.tags,
+            optional: result.optional,
+            step: result.step,
+            totalSteps: result.totalSteps,
+          },
+        ]);
+      } catch (error) {
+        console.error("Failed to start onboarding", error);
+        setPageError("Session expired or unauthorized. Please log in again.");
+        router.replace("/auth/login");
+      }
+    }
+
+    void init();
   }, [router]);
 
   useEffect(() => {
@@ -133,7 +195,7 @@ export default function ProfileBuilderPage() {
     });
 
     return () => cancelAnimationFrame(raf1);
-  }, [messages, isTyping]);
+  }, [messages, selectedTags, pageError]);
 
   useEffect(() => {
     const el = textareaRef.current;
@@ -143,72 +205,138 @@ export default function ProfileBuilderPage() {
   }, [input]);
 
   function addUser(text: string) {
-    setMessages((p) => [...p, { id: uid(), kind: "user", text }]);
+    setMessages((prev) => [...prev, { id: uid(), kind: "user", text }]);
   }
 
   function addBotText(text: string) {
-    setMessages((p) => [...p, { id: uid(), kind: "botText", text }]);
+    setMessages((prev) => [...prev, { id: uid(), kind: "botText", text }]);
   }
 
-  function addBotQuestion(q: Question) {
-    setMessages((p) => [
-      ...p,
+  function addBotQuestion(q: OnboardingQuestionResponse) {
+    setMessages((prev) => [
+      ...prev,
       {
         id: uid(),
         kind: "botQuestion",
-        title: q.ask,
-        helper: q.helper,
-        example: q.example,
+        title: q.question,
+        helper: fieldHelper(q.field),
+        field: q.field,
+        tags: q.tags,
+        optional: q.optional,
+        step: q.step,
+        totalSteps: q.totalSteps,
       },
     ]);
   }
 
-  function finish() {
-    setDone(true);
-    addBotText("✅ All set. Your profile draft is ready. Tap Continue →");
+  function toggleTag(tagValue: string) {
+    setSelectedTags((prev) =>
+      prev.includes(tagValue)
+        ? prev.filter((item) => item !== tagValue)
+        : [...prev, tagValue]
+    );
   }
 
-  async function onSend() {
-    if (done || isBusy) return;
+  async function handleSubmit() {
+    if (!currentQuestion || done || isBusy) return;
 
-    const text = input.trim();
-    if (!text) return;
+    const textInput = input.trim();
 
-    const currentQuestion = QUESTIONS[qIndex];
-
-    setIsBusy(true);
-    addUser(text);
-    setInput("");
-
-    setAnswers((p) => ({ ...p, [currentQuestion.id]: text }));
-
-    if (currentQuestion.id === "innovate") {
-      setIsTyping(true);
-      await sleep(600);
-      addBotText("Everything. 😄");
-      await sleep(700);
-      addBotText(SCRIPT_AFTER_INNOVATE);
-      setIsTyping(false);
-    }
-
-    const next = qIndex + 1;
-
-    if (next < total) {
-      await sleep(650);
-      setQIndex(next);
-      addBotQuestion(QUESTIONS[next]);
-      setIsBusy(false);
+    if (selectedTags.length === 0 && !textInput) {
+      setPageError("Select at least one tag or type an answer.");
       return;
     }
 
-    await sleep(550);
-    finish();
-    setIsBusy(false);
+    setIsBusy(true);
+    setPageError("");
+
+    const summary = selectionToText(selectedTags, selectedTagLabels, textInput);
+    addUser(summary || "Answered");
+
+    try {
+      const result = await answerOnboarding({
+        selectedTags,
+        textInput,
+      });
+
+      setSelectedTags([]);
+      setInput("");
+
+      if (isCompleteResponse(result)) {
+        setDone(true);
+
+        try {
+          await syncOnboardingToProfile();
+        } catch (syncError) {
+          console.error("Sync failed", syncError);
+        }
+
+        const identity = getStoredIdentity();
+        if (identity) {
+          localStorage.setItem(
+            "identity",
+            JSON.stringify({ ...identity, onboardingCompleted: true })
+          );
+        }
+
+        addBotText("✅ All set. Your onboarding is complete. Tap Continue →");
+        return;
+      }
+
+      setCurrentQuestion(result);
+      addBotQuestion(result);
+    } catch (error) {
+      console.error("Failed to submit onboarding answer", error);
+      setPageError("Could not save your answer. Please try again.");
+    } finally {
+      setIsBusy(false);
+    }
   }
 
-  function onContinue() {
-    localStorage.setItem("profileCompleted", "true");
-    localStorage.setItem("profileAnswers", JSON.stringify(answers));
+  async function handleSkip() {
+    if (!currentQuestion?.optional || done || isBusy) return;
+
+    setIsBusy(true);
+    setPageError("");
+
+    try {
+      addUser("Skipped");
+
+      const result = await skipOnboarding();
+
+      if (isCompleteResponse(result)) {
+        setDone(true);
+
+        try {
+          await syncOnboardingToProfile();
+        } catch (syncError) {
+          console.error("Sync failed", syncError);
+        }
+
+        const identity = getStoredIdentity();
+        if (identity) {
+          localStorage.setItem(
+            "identity",
+            JSON.stringify({ ...identity, onboardingCompleted: true })
+          );
+        }
+
+        addBotText("✅ All set. Your onboarding is complete. Tap Continue →");
+        return;
+      }
+
+      setCurrentQuestion(result);
+      addBotQuestion(result);
+    } catch (error) {
+      console.error("Skip failed", error);
+      setPageError("Could not skip this step. Please try again.");
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  function handleContinue() {
+    if (!done) return;
     router.push("/home");
   }
 
@@ -221,7 +349,7 @@ export default function ProfileBuilderPage() {
               Build your SphereNet profile
             </div>
             <div className="mt-1 text-sm text-[var(--text-muted-2)]">
-              Step {activeStep} of {total}
+              Step {activeStep} of {totalSteps}
             </div>
           </div>
         </div>
@@ -229,14 +357,14 @@ export default function ProfileBuilderPage() {
 
       <div
         ref={scrollAreaRef}
-        className="mx-auto h-[calc(100dvh-88px)] w-full max-w-[480px] overflow-y-auto px-4 pt-3 pb-[190px]"
+        className="mx-auto h-[calc(100dvh-88px)] w-full max-w-[480px] overflow-y-auto px-4 pt-3 pb-[250px]"
       >
         <div className="space-y-4">
           {messages.map((m) => {
             if (m.kind === "user") {
               return (
                 <div key={m.id} className="flex justify-end">
-                  <div className="max-w-[78%] rounded-[20px] rounded-br-md bg-[var(--primary-btn-bg)] px-4 py-3 text-[15px] font-medium leading-6 text-[var(--primary-btn-text)] shadow-sm break-words">
+                  <div className="max-w-[78%] break-words rounded-[20px] rounded-br-md bg-[var(--primary-btn-bg)] px-4 py-3 text-[15px] font-medium leading-6 text-[var(--primary-btn-text)] shadow-sm">
                     {m.text}
                   </div>
                 </div>
@@ -256,26 +384,51 @@ export default function ProfileBuilderPage() {
 
                 <div className="max-w-[78%]">
                   {m.kind === "intro" || m.kind === "botText" ? (
-                    <div className="rounded-[20px] rounded-bl-md border border-[var(--line-soft)] bg-[var(--surface-solid)] px-4 py-3 text-[15px] leading-6 text-[var(--text-main)] shadow-sm break-words">
+                    <div className="break-words rounded-[20px] rounded-bl-md border border-[var(--line-soft)] bg-[var(--surface-solid)] px-4 py-3 text-[15px] leading-6 text-[var(--text-main)] shadow-sm">
                       {m.text}
                     </div>
                   ) : (
                     <div className="rounded-[20px] rounded-bl-md border border-[var(--line-soft)] bg-[var(--surface-solid)] px-4 py-4 shadow-sm">
-                      <div className="text-[17px] font-bold leading-7 text-[var(--text-main)] break-words">
+                      <div className="break-words text-[17px] font-bold leading-7 text-[var(--text-main)]">
                         {m.title}
                       </div>
 
                       {m.helper && (
-                        <div className="mt-2 text-sm leading-6 text-[var(--text-muted-2)] break-words">
+                        <div className="mt-2 break-words text-sm leading-6 text-[var(--text-muted-2)]">
                           {m.helper}
                         </div>
                       )}
 
-                      {m.example && (
-                        <div className="mt-3 text-sm italic leading-7 text-[var(--text-soft-2)] break-words">
-                          {m.example}
+                      {m.tags && m.tags.length > 0 ? (
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {m.tags.map((tag) => {
+                            const submitValue = getTagSubmitValue(tag);
+                            const displayLabel = getTagLabel(tag);
+                            const active = selectedTags.includes(submitValue);
+
+                            return (
+                              <button
+                                key={submitValue}
+                                type="button"
+                                onClick={() => toggleTag(submitValue)}
+                                className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+                                  active
+                                    ? "border-black bg-black text-white"
+                                    : "border-[var(--line-soft)] bg-transparent text-[var(--text-main)]"
+                                }`}
+                              >
+                                {displayLabel}
+                              </button>
+                            );
+                          })}
                         </div>
-                      )}
+                      ) : null}
+
+                      {m.optional ? (
+                        <div className="mt-3 text-xs text-[var(--text-muted-2)]">
+                          This step is optional.
+                        </div>
+                      ) : null}
                     </div>
                   )}
                 </div>
@@ -283,22 +436,11 @@ export default function ProfileBuilderPage() {
             );
           })}
 
-          {isTyping && (
-            <div className="flex items-center gap-2">
-              <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--line-soft)] bg-[var(--surface-solid)] shadow-sm">
-                <Icon
-                  icon="material-symbols:support-agent-rounded"
-                  width="18"
-                  height="18"
-                  className="text-[var(--text-main)]"
-                />
-              </div>
-
-              <div className="max-w-[78%] rounded-[20px] rounded-bl-md border border-[var(--line-soft)] bg-[var(--surface-solid)] px-4 py-3 text-sm italic text-[var(--text-muted-2)] shadow-sm">
-                SphereGuide is typing...
-              </div>
+          {pageError ? (
+            <div className="rounded-[18px] border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {pageError}
             </div>
-          )}
+          ) : null}
 
           <div ref={bottomRef} />
         </div>
@@ -306,44 +448,58 @@ export default function ProfileBuilderPage() {
 
       <div className="fixed bottom-0 left-0 right-0 bg-[var(--surface-solid)]">
         <div className="mx-auto w-full max-w-[480px] px-4 pt-3 pb-[calc(16px+env(safe-area-inset-bottom))]">
-          <div className="flex items-end gap-3">
-            <div className="flex-1 rounded-[22px] border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 shadow-sm">
-              <textarea
-                ref={textareaRef}
-                value={input}
-                disabled={done || isBusy}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    onSend();
-                  }
-                }}
-                placeholder={
-                  isBusy
-                    ? "SphereGuide is responding..."
-                    : "Type your answer..."
+          <div className="rounded-[22px] border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 shadow-sm">
+            <textarea
+              ref={textareaRef}
+              value={input}
+              disabled={done || isBusy}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  void handleSubmit();
                 }
-                rows={1}
-                className="w-full resize-none bg-transparent text-[15px] leading-6 text-[var(--text-main)] outline-none placeholder:text-[var(--text-muted-2)]"
-              />
-            </div>
-
-            <button
-              onClick={onSend}
-              disabled={done || isBusy || input.trim().length === 0}
-              className="h-12 shrink-0 rounded-[18px] bg-[var(--primary-btn-bg)] px-6 font-bold text-[var(--primary-btn-text)] shadow-sm disabled:opacity-50"
-            >
-              Send
-            </button>
+              }}
+              placeholder={
+                isBusy
+                  ? "Submitting..."
+                  : "Type additional details or custom answer..."
+              }
+              rows={1}
+              className="w-full resize-none bg-transparent text-[15px] leading-6 text-[var(--text-main)] outline-none placeholder:text-[var(--text-muted-2)]"
+            />
           </div>
 
-          <button
-            onClick={onContinue}
-            className="mt-3 h-12 w-full rounded-[18px] border border-[var(--line-soft)] bg-[var(--muted)] font-bold text-[var(--text-main)] shadow-sm"
-          >
-            Continue →
-          </button>
+          <div className="mt-3 flex gap-3">
+            {currentQuestion?.optional && !done ? (
+              <button
+                onClick={() => void handleSkip()}
+                disabled={isBusy}
+                className="h-12 flex-1 rounded-[18px] border border-[var(--line-soft)] bg-[var(--muted)] font-bold text-[var(--text-main)] shadow-sm disabled:opacity-50"
+              >
+                Skip
+              </button>
+            ) : null}
+
+            {!done ? (
+              <button
+                onClick={() => void handleSubmit()}
+                disabled={
+                  isBusy || (selectedTags.length === 0 && input.trim().length === 0)
+                }
+                className="h-12 flex-1 rounded-[18px] bg-[var(--primary-btn-bg)] px-6 font-bold text-[var(--primary-btn-text)] shadow-sm disabled:opacity-50"
+              >
+                Continue
+              </button>
+            ) : (
+              <button
+                onClick={handleContinue}
+                className="h-12 w-full rounded-[18px] bg-[var(--primary-btn-bg)] px-6 font-bold text-[var(--primary-btn-text)] shadow-sm"
+              >
+                Continue →
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

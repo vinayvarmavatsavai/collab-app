@@ -3,11 +3,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 const client = new Client({
-    host: process.env.DATABASE_HOST || 'localhost',
+    host: process.env.DATABASE_HOST || '127.0.0.1',
     port: parseInt(process.env.DATABASE_PORT || '5432', 10),
-    user: process.env.DATABASE_USER || 'test',
-    password: process.env.DATABASE_PASSWORD || 'test123',
-    database: process.env.DATABASE_NAME || 'startup101_db',
+    user: process.env.DATABASE_USER || 'postgres',
+    password: process.env.DATABASE_PASSWORD || 'postgres',
+    database: process.env.DATABASE_NAME || 'spherenet',
 });
 
 async function resetSkills() {

@@ -11,330 +11,298 @@ import { CanonicalRoleService } from 'src/matching/services/canonical-role.servi
 import { CanonicalDomainService } from 'src/matching/services/canonical-domain.service';
 import { isUUID } from 'class-validator';
 
-/**
- * Onboarding Service - Resume-Driven Tag-Based Flow
- * 
- * Flow:
- * 1. Upload resume (optional) → Parse → Store
- * 2. Question 1: Domains (tags from resume + predefined)
- * 3. Question 2: Skills (tags from resume + predefined)
- * 4. Question 3: Experience (optional, from resume)
- * 5. Question 4: Interests (optional)
- * 6. Question 5: Availability (optional)
- */
 @Injectable()
 export class OnboardingService {
-    private readonly logger = new Logger(OnboardingService.name);
+  private readonly logger = new Logger(OnboardingService.name);
 
-    private readonly QUESTIONS = [
-        { step: 1, question: 'What represents your primary role?', field: 'primary_role', optional: false },
-        { step: 2, question: 'Do you have any other roles?', field: 'roles', optional: true },
-        { step: 3, question: 'What areas do you work in?', field: 'domains', optional: false },
-        { step: 4, question: 'What are your main skills?', field: 'skills', optional: false },
-        { step: 5, question: 'What interests you?', field: 'interests', optional: true },
-        { step: 6, question: 'How much time can you commit?', field: 'availability', optional: true },
-    ];
+  private readonly QUESTIONS = [
+    { step: 1, question: 'What represents your primary role?', field: 'primary_role', optional: false },
+    { step: 2, question: 'Do you have any other roles?', field: 'roles', optional: true },
+    { step: 3, question: 'What areas do you work in?', field: 'domains', optional: false },
+    { step: 4, question: 'What are your main skills?', field: 'skills', optional: false },
+    { step: 5, question: 'What interests you?', field: 'interests', optional: true },
+    { step: 6, question: 'How much time can you commit?', field: 'availability', optional: true },
+  ];
 
-    constructor(
-        @InjectRepository(OnboardingSession)
-        private repo: Repository<OnboardingSession>,
-        private usersService: UsersService,
-        private tagGenerator: TagGeneratorService,
-        private hybridExtractor: HybridExtractorService,
-        private canonicalSkillService: CanonicalSkillService,
-        private canonicalRoleService: CanonicalRoleService,
-        private canonicalDomainService: CanonicalDomainService,
-    ) { }
+  constructor(
+    @InjectRepository(OnboardingSession)
+    private repo: Repository<OnboardingSession>,
+    private usersService: UsersService,
+    private tagGenerator: TagGeneratorService,
+    private hybridExtractor: HybridExtractorService,
+    private canonicalSkillService: CanonicalSkillService,
+    private canonicalRoleService: CanonicalRoleService,
+    private canonicalDomainService: CanonicalDomainService,
+  ) {}
 
+  async start(identityId: string) {
+    let session = await this.repo.findOne({ where: { identityId } });
 
-    async start(identityId: string) {
-        let session = await this.repo.findOne({ where: { identityId } });
-
-        if (!session) {
-            session = this.repo.create({
-                identityId,
-                status: OnboardingStatus.IN_PROGRESS,
-                step: 0,
-                profile: {
-                    domains: [],
-                    skills: [],
-                    experience: [],
-                    interests: [],
-                    availability: null,
-                },
-                selectedTags: {},
-                conversationHistory: [],
-            });
-            await this.repo.save(session);
-        }
-
-        // Get first question
-        return this.getNextQuestion(session);
+    if (!session) {
+      session = this.repo.create({
+        identityId,
+        status: OnboardingStatus.IN_PROGRESS,
+        step: 0,
+        profile: {
+          domains: [],
+          skills: [],
+          experience: [],
+          interests: [],
+          availability: null,
+        },
+        selectedTags: {},
+        conversationHistory: [],
+      });
+      await this.repo.save(session);
     }
 
-    /**
-     * Answer a question with hybrid input (tags + text)
-     */
-    async answer(identityId: string, hybridInput: HybridInput) {
-        const session = await this.repo.findOne({
-            where: { identityId, status: OnboardingStatus.IN_PROGRESS },
-        });
+    return this.getNextQuestion(session);
+  }
 
-        if (!session) throw new NotFoundException('Onboarding session not found');
+  async answer(identityId: string, hybridInput: HybridInput) {
+    const session = await this.repo.findOne({
+      where: { identityId, status: OnboardingStatus.IN_PROGRESS },
+    });
 
-        const currentQ = this.QUESTIONS[session.step];
-        if (!currentQ) throw new BadRequestException('Invalid step');
+    if (!session) throw new NotFoundException('Onboarding session not found');
 
-        // Store selected tags
-        session.selectedTags[currentQ.field] = hybridInput.selectedTags;
+    const currentQ = this.QUESTIONS[session.step];
+    if (!currentQ) throw new BadRequestException('Invalid step');
 
-        // Extract data from hybrid input
-        this.extractToProfile(session.profile, currentQ.field, hybridInput);
+    session.selectedTags[currentQ.field] = hybridInput.selectedTags;
 
-        // HYDRATE: Resolve UUIDs to Names for UI summary
-        await this.hydrateProfile(session.profile);
+    this.extractToProfile(session.profile, currentQ.field, hybridInput);
 
-        // Move to next step
-        session.step++;
+    // IMPORTANT: do not mutate stored profile into names before save
+    session.step++;
+    await this.repo.save(session);
 
-        await this.repo.save(session);
-
-        // Check if complete
-        if (session.step >= this.QUESTIONS.length) {
-            return this.completeOnboarding(session);
-        }
-
-        // Get next question
-        return this.getNextQuestion(session);
+    if (session.step >= this.QUESTIONS.length) {
+      return this.completeOnboarding(session);
     }
 
-    /**
-     * Skip optional question
-     */
-    async skip(identityId: string) {
-        const session = await this.repo.findOne({
-            where: { identityId, status: OnboardingStatus.IN_PROGRESS },
-        });
+    return this.getNextQuestion(session);
+  }
 
-        if (!session) throw new NotFoundException('Onboarding session not found');
+  async skip(identityId: string) {
+    const session = await this.repo.findOne({
+      where: { identityId, status: OnboardingStatus.IN_PROGRESS },
+    });
 
-        const currentQ = this.QUESTIONS[session.step];
-        if (!currentQ?.optional) {
-            throw new BadRequestException('Cannot skip required question');
-        }
+    if (!session) throw new NotFoundException('Onboarding session not found');
 
-        // Move to next step
-        session.step++;
-        await this.repo.save(session);
-
-        // Check if complete
-        if (session.step >= this.QUESTIONS.length) {
-            return this.completeOnboarding(session);
-        }
-
-        return this.getNextQuestion(session);
+    const currentQ = this.QUESTIONS[session.step];
+    if (!currentQ?.optional) {
+      throw new BadRequestException('Cannot skip required question');
     }
 
-    /**
-     * Get next question with tag suggestions
-     */
-    private async getNextQuestion(session: OnboardingSession) {
-        const currentQ = this.QUESTIONS[session.step];
+    session.step++;
+    await this.repo.save(session);
 
-        if (!currentQ) {
-            return this.completeOnboarding(session);
-        }
-
-        // Generate tag suggestions based on question type
-        let tags: TagSuggestion[] = [];
-
-        switch (currentQ.field) {
-            case 'primary_role':
-            case 'roles':
-                tags = await this.tagGenerator.getRoleTags();
-                break;
-            case 'domains':
-                tags = await this.tagGenerator.getDomainTags();
-                break;
-            case 'skills':
-                // Pass selected domains for smart filtering
-                tags = await this.tagGenerator.getSkillTags(
-                    session.profile?.domains || []
-                );
-                break;
-            case 'interests':
-                tags = this.tagGenerator.getInterestTags();
-                break;
-            case 'availability':
-                tags = this.tagGenerator.getAvailabilityTags();
-                break;
-        }
-
-        return {
-            question: currentQ.question,
-            field: currentQ.field,
-            tags,
-            optional: currentQ.optional,
-            step: session.step + 1,
-            totalSteps: this.QUESTIONS.length,
-            completenessPercentage: this.calculateCompleteness(session),
-        };
+    if (session.step >= this.QUESTIONS.length) {
+      return this.completeOnboarding(session);
     }
 
-    /**
-     * Extract data from hybrid input to profile
-     */
-    private extractToProfile(profile: Profile, field: string, input: HybridInput) {
-        switch (field) {
-            case 'primary_role':
-                if (input.selectedTags.length > 0) {
-                    profile.primaryRole = input.selectedTags[0];
-                } else if (input.textInput) {
-                    profile.primaryRole = input.textInput;
-                }
-                break;
-            case 'roles':
-                // Combine tags and text input (if comma separated)
-                const newRoles = [...input.selectedTags];
-                if (input.textInput) {
-                    newRoles.push(...input.textInput.split(',').map(r => r.trim()).filter(r => r.length > 0));
-                }
-                profile.roles = [...new Set([...(profile.roles || []), ...newRoles])];
-                break;
-            case 'domains':
-                profile.domains = this.hybridExtractor.extractDomains(input);
-                break;
-            case 'skills':
-                profile.skills = this.hybridExtractor.extractSkills(input);
-                break;
-            case 'experience':
-                profile.experience = this.hybridExtractor.extractExperience(input);
-                break;
-            case 'interests':
-                profile.interests = this.hybridExtractor.extractInterests(input);
-                break;
-            case 'availability':
-                profile.availability = this.hybridExtractor.extractAvailability(input);
-                break;
-        }
+    return this.getNextQuestion(session);
+  }
+
+  private async getNextQuestion(session: OnboardingSession) {
+    const currentQ = this.QUESTIONS[session.step];
+
+    if (!currentQ) {
+      return this.completeOnboarding(session);
     }
 
-    /**
-     * Calculate profile completeness
-     */
-    private calculateCompleteness(session: OnboardingSession): number {
-        const profile = session.profile;
-        let score = 0;
+    let tags: TagSuggestion[] = [];
 
-        if (profile.domains.length > 0) score += 25;
-        if (profile.skills.length > 0) score += 25;
-        if (profile.experience.length > 0) score += 20;
-        if (profile.interests.length > 0) score += 15;
-        if (profile.availability) score += 15;
-
-        return Math.min(score, 100);
+    switch (currentQ.field) {
+      case 'primary_role':
+      case 'roles':
+        tags = await this.tagGenerator.getRoleTags();
+        break;
+      case 'domains':
+        tags = await this.tagGenerator.getDomainTags();
+        break;
+      case 'skills':
+        tags = await this.tagGenerator.getSkillTags(session.profile?.domains || []);
+        break;
+      case 'interests':
+        tags = this.tagGenerator.getInterestTags();
+        break;
+      case 'availability':
+        tags = this.tagGenerator.getAvailabilityTags();
+        break;
     }
 
+    return {
+      question: currentQ.question,
+      field: currentQ.field,
+      tags,
+      optional: currentQ.optional,
+      step: session.step + 1,
+      totalSteps: this.QUESTIONS.length,
+      completenessPercentage: this.calculateCompleteness(session),
+    };
+  }
 
+  private extractToProfile(profile: Profile, field: string, input: HybridInput) {
+    switch (field) {
+      case 'primary_role':
+        if (input.selectedTags.length > 0) {
+          profile.primaryRole = input.selectedTags[0];
+        } else if (input.textInput) {
+          profile.primaryRole = input.textInput;
+        }
+        break;
 
-    /**
-     * Complete onboarding
-     */
-    private async completeOnboarding(session: OnboardingSession) {
+      case 'roles': {
+        const newRoles = [...input.selectedTags];
+        if (input.textInput) {
+          newRoles.push(
+            ...input.textInput
+              .split(',')
+              .map((r) => r.trim())
+              .filter((r) => r.length > 0),
+          );
+        }
+        profile.roles = [...new Set([...(profile.roles || []), ...newRoles])];
+        break;
+      }
 
+      case 'domains':
+        profile.domains = this.hybridExtractor.extractDomains(input);
+        break;
 
-        session.status = OnboardingStatus.COMPLETED;
-        session.completedAt = new Date();
-        await this.repo.save(session);
+      case 'skills':
+        profile.skills = this.hybridExtractor.extractSkills(input);
+        break;
 
-        // Automatically sync to user profile
-        await this.usersService.updateFromOnboarding(session.identityId, session.profile);
+      case 'experience':
+        profile.experience = this.hybridExtractor.extractExperience(input);
+        break;
 
-        return {
-            complete: true,
-            profile: session.profile,
-            completenessPercentage: this.calculateCompleteness(session),
-        };
+      case 'interests':
+        profile.interests = this.hybridExtractor.extractInterests(input);
+        break;
+
+      case 'availability':
+        profile.availability = this.hybridExtractor.extractAvailability(input);
+        break;
+    }
+  }
+
+  private calculateCompleteness(session: OnboardingSession): number {
+    const profile = session.profile;
+    let score = 0;
+
+    if (profile.domains.length > 0) score += 25;
+    if (profile.skills.length > 0) score += 25;
+    if (profile.experience.length > 0) score += 20;
+    if (profile.interests.length > 0) score += 15;
+    if (profile.availability) score += 15;
+
+    return Math.min(score, 100);
+  }
+
+  private async completeOnboarding(session: OnboardingSession) {
+    session.status = OnboardingStatus.COMPLETED;
+    session.completedAt = new Date();
+    await this.repo.save(session);
+
+    // Persist raw canonical ids / raw stored values
+    await this.usersService.updateFromOnboarding(session.identityId, session.profile);
+
+    // Return hydrated copy for UI only
+    const hydratedProfile = await this.getHydratedProfileCopy(session.profile);
+
+    return {
+      complete: true,
+      profile: hydratedProfile,
+      completenessPercentage: this.calculateCompleteness(session),
+    };
+  }
+
+  async finalize(identityId: string, profile: any) {
+    const session = await this.repo.findOne({ where: { identityId } });
+    if (!session) throw new NotFoundException();
+
+    // Always finalize from stored session profile, not hydrated UI profile
+    await this.usersService.updateFromOnboarding(identityId, session.profile);
+
+    session.status = OnboardingStatus.COMPLETED;
+    session.completedAt = new Date();
+    await this.repo.save(session);
+  }
+
+  async getStatus(identityId: string) {
+    const session = await this.repo.findOne({ where: { identityId } });
+
+    if (!session) {
+      return {
+        status: OnboardingStatus.NOT_STARTED,
+        currentQuestion: null,
+        profile: null,
+        completenessPercentage: 0,
+      };
     }
 
-    /**
-     * Finalize - save to user profile
-     */
-    async finalize(identityId: string, profile: any) {
-        const session = await this.repo.findOne({ where: { identityId } });
-        if (!session) throw new NotFoundException();
+    const hydratedProfile =
+      session.profile ? await this.getHydratedProfileCopy(session.profile) : null;
 
-        await this.usersService.updateFromOnboarding(identityId, profile);
+    return {
+      status: session.status,
+      currentQuestion: session.currentQuestion,
+      profile: hydratedProfile,
+      completenessPercentage: this.calculateCompleteness(session),
+    };
+  }
 
-        session.status = OnboardingStatus.COMPLETED;
-        session.completedAt = new Date();
-        await this.repo.save(session);
+  private async getHydratedProfileCopy(profile: Profile): Promise<Profile> {
+    const copy: Profile = JSON.parse(JSON.stringify(profile));
+    await this.hydrateProfile(copy);
+    return copy;
+  }
+
+  private async hydrateProfile(profile: Profile): Promise<void> {
+    if (profile.primaryRole && isUUID(profile.primaryRole)) {
+      const role = await this.canonicalRoleService.getRoleById(profile.primaryRole);
+      if (role) profile.primaryRole = role.name;
     }
 
-    /**
-     * Get current status
-     */
-    async getStatus(identityId: string) {
-        const session = await this.repo.findOne({ where: { identityId } });
-
-        if (!session) {
-            return {
-                status: OnboardingStatus.NOT_STARTED,
-                currentQuestion: null,
-                profile: null,
-                completenessPercentage: 0,
-            };
-        }
-
-        return {
-            status: session.status,
-            currentQuestion: session.currentQuestion,
-            profile: session.profile,
-            completenessPercentage: this.calculateCompleteness(session),
-        };
+    if (profile.roles && profile.roles.length > 0) {
+      profile.roles = await Promise.all(
+        profile.roles.map(async (r) => {
+          if (isUUID(r)) {
+            const role = await this.canonicalRoleService.getRoleById(r);
+            return role ? role.name : r;
+          }
+          return r;
+        }),
+      );
     }
 
-    /**
-     * Hydrate UUIDs in profile to human-readable names
-     */
-    private async hydrateProfile(profile: Profile): Promise<void> {
-        // Hydrate primary role
-        if (profile.primaryRole && isUUID(profile.primaryRole)) {
-            const role = await this.canonicalRoleService.getRoleById(profile.primaryRole);
-            if (role) profile.primaryRole = role.name;
-        }
-
-        // Hydrate roles
-        if (profile.roles && profile.roles.length > 0) {
-            profile.roles = await Promise.all(profile.roles.map(async (r) => {
-                if (isUUID(r)) {
-                    const role = await this.canonicalRoleService.getRoleById(r);
-                    return role ? role.name : r;
-                }
-                return r;
-            }));
-        }
-
-        // Hydrate domains
-        if (profile.domains && profile.domains.length > 0) {
-            profile.domains = await Promise.all(profile.domains.map(async (d) => {
-                if (isUUID(d)) {
-                    const domain = await this.canonicalDomainService.getDomainById(d);
-                    return domain ? domain.name : d;
-                }
-                return d;
-            }));
-        }
-
-        // Hydrate skills
-        if (profile.skills && profile.skills.length > 0) {
-            profile.skills = await Promise.all(profile.skills.map(async (s) => {
-                if (isUUID(s)) {
-                    const skill = await this.canonicalSkillService.getSkillById(s);
-                    return skill ? skill.name : s;
-                }
-                return s;
-            }));
-        }
+    if (profile.domains && profile.domains.length > 0) {
+      profile.domains = await Promise.all(
+        profile.domains.map(async (d) => {
+          if (isUUID(d)) {
+            const domain = await this.canonicalDomainService.getDomainById(d);
+            return domain ? domain.name : d;
+          }
+          return d;
+        }),
+      );
     }
+
+    if (profile.skills && profile.skills.length > 0) {
+      profile.skills = await Promise.all(
+        profile.skills.map(async (s) => {
+          if (isUUID(s)) {
+            const skill = await this.canonicalSkillService.getSkillById(s);
+            return skill ? skill.name : s;
+          }
+          return s;
+        }),
+      );
+    }
+  }
 }
