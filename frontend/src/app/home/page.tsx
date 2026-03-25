@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "../navigation/Header";
 import BottomNav from "../navigation/BottomNav";
+import { apiRequest } from "@/lib/api";
 
 type ActiveCollab = {
   id: number;
@@ -28,51 +29,35 @@ type ActivityPost = {
   time: string;
 };
 
-const ACTIVE_COLLABS_KEY = "activeCollaborations_v1";
+type UserProfileResponse = {
+  id?: string;
+  firstname?: string;
+  lastname?: string;
+  username?: string;
+};
 
-const mockActivity: ActivityPost[] = [
-  {
-    id: 11,
-    orgName: "Syncreate Private Limited",
-    orgSubtitle: "Update",
-    logoText: "S",
-    images: ["/feed/drone-1.jpg", "/feed/drone-2.jpg", "/feed/drone-3.jpg"],
-    text:
-      "We have successfully built an agricultural drone which we are currently testing in the fields of Haryana.",
-    time: "2h ago",
-  },
-  {
-    id: 12,
-    orgName: "Apogee",
-    orgSubtitle: "Survey",
-    logoText: "A",
-    images: ["/feed/campus-1.jpg", "/feed/campus-2.jpg"],
-    text:
-      "Quick survey: what should we build next for student-startup collaborations?",
-    time: "6h ago",
-  },
-];
+type CohortResponse = {
+  id?: string;
+  project?: {
+    id?: string;
+    title?: string;
+  };
+};
 
-function getDisplayName(): string {
-  try {
-    const raw = localStorage.getItem("profileAnswers");
-    if (!raw) return "Rahul";
-    const parsed = JSON.parse(raw);
-
-    const candidates = [
-      parsed?.name,
-      parsed?.fullName,
-      parsed?.yourName,
-      parsed?.["Your name"],
-      parsed?.["Name"],
-    ].filter(Boolean);
-
-    const n = (candidates?.[0] ?? "Rahul") as string;
-    return n.trim() || "Rahul";
-  } catch {
-    return "Rahul";
-  }
-}
+type NotificationResponse = {
+  id?: string;
+  notificationType?: string;
+  notifiedAt?: string;
+  project?: {
+    id?: string;
+    title?: string;
+    creator?: {
+      firstname?: string;
+      lastname?: string;
+      username?: string;
+    };
+  };
+};
 
 function buildQuickLinks(projectId: string) {
   return [
@@ -82,34 +67,46 @@ function buildQuickLinks(projectId: string) {
   ];
 }
 
-function resolveProjectIdFromLegacyTitle(title: string) {
-  const normalized = title.trim().toLowerCase();
+function formatDisplayTime(value?: string) {
+  if (!value) return "Recently";
 
-  if (normalized.includes("ai model optimization")) return "sphere-ai-collab";
-  if (normalized.includes("startup landing page revamp"))
-    return "startup-landing-revamp";
-  if (normalized.includes("creator community mobile app"))
-    return "creator-community-app";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Recently";
 
-  return "sphere-ai-collab";
+  const diffMs = Date.now() - date.getTime();
+  const diffMinutes = Math.max(1, Math.floor(diffMs / (1000 * 60)));
+
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  return date.toLocaleDateString();
 }
 
-function normalizeStoredCollab(item: any): ActiveCollab {
-  const projectId =
-    item?.projectId ||
-    item?.slug ||
-    item?.projectSlug ||
-    resolveProjectIdFromLegacyTitle(item?.title || "");
+function buildNotificationText(item: NotificationResponse) {
+  const type = (item.notificationType || "update").toLowerCase();
+  const creator =
+    item.project?.creator?.firstname ||
+    item.project?.creator?.username ||
+    "a collaborator";
 
-  return {
-    id: Number(item?.id ?? Date.now()),
-    projectId,
-    title: item?.title || "Untitled Collaboration",
-    status: item?.status === "Paused" ? "Paused" : "Active",
-    deadline: item?.deadline || "Deadline: --/--/--",
-    sprintsLeft: item?.sprintsLeft || "0 sprints left",
-    quickLinks: buildQuickLinks(projectId),
-  };
+  if (type === "match") {
+    return `You have a new match update for this collaboration from ${creator}.`;
+  }
+
+  if (type === "selected") {
+    return `You were selected in this collaboration flow by ${creator}.`;
+  }
+
+  if (type === "rejected") {
+    return `There was a status update on this collaboration from ${creator}.`;
+  }
+
+  return `You have a new collaboration update from ${creator}.`;
 }
 
 export default function HomePage() {
@@ -117,59 +114,100 @@ export default function HomePage() {
 
   const [name, setName] = useState("Rahul");
   const [activeCollabs, setActiveCollabs] = useState<ActiveCollab[]>([]);
+  const [activity, setActivity] = useState<ActivityPost[]>([]);
   const [imgIndexByPost, setImgIndexByPost] = useState<Record<number, number>>(
     {},
   );
 
   useEffect(() => {
-    setName(getDisplayName());
+    async function loadProfile() {
+      try {
+        const profile = await apiRequest<UserProfileResponse>("/users/me/profile");
 
-    try {
-      const raw = localStorage.getItem(ACTIVE_COLLABS_KEY);
-      const parsed = raw ? JSON.parse(raw) : null;
+        const fullName =
+          `${profile.firstname || ""} ${profile.lastname || ""}`.trim() ||
+          profile.username ||
+          "User";
 
-      if (Array.isArray(parsed) && parsed.length) {
-        const normalized = parsed.map(normalizeStoredCollab);
-        setActiveCollabs(normalized);
-      } else {
-        setActiveCollabs([
-          {
-            id: 901,
-            projectId: "sphere-ai-collab",
-            title: "AI Model Optimization",
-            status: "Active",
-            deadline: "Deadline: 10/03/26",
-            sprintsLeft: "2 sprints left",
-            quickLinks: buildQuickLinks("sphere-ai-collab"),
-          },
-          {
-            id: 902,
-            projectId: "startup-landing-revamp",
-            title: "Startup Landing Page Revamp",
-            status: "Active",
-            deadline: "Deadline: 18/03/26",
-            sprintsLeft: "1 sprint left",
-            quickLinks: buildQuickLinks("startup-landing-revamp"),
-          },
-          {
-            id: 903,
-            projectId: "creator-community-app",
-            title: "Creator Community Mobile App",
-            status: "Paused",
-            deadline: "Deadline: 28/03/26",
-            sprintsLeft: "3 sprints left",
-            quickLinks: buildQuickLinks("creator-community-app"),
-          },
-        ]);
+        setName(fullName);
+      } catch (error) {
+        console.error("Failed to load profile:", error);
+        setName("User");
       }
-    } catch {
-      setActiveCollabs([]);
     }
 
-    const init: Record<number, number> = {};
-    for (const p of mockActivity) init[p.id] = 0;
-    setImgIndexByPost(init);
+    async function loadCohorts() {
+      try {
+        const cohorts = await apiRequest<CohortResponse[]>("/cohorts/me");
+
+        const mapped: ActiveCollab[] = (Array.isArray(cohorts) ? cohorts : []).map(
+          (item, index) => {
+            const projectId = item.project?.id || "unknown-project";
+            const title = item.project?.title || "Untitled Collaboration";
+
+            return {
+              id: index + 1,
+              projectId,
+              title,
+              status: "Active",
+              deadline: "Deadline: --/--/--",
+              sprintsLeft: "Ongoing",
+              quickLinks: buildQuickLinks(projectId),
+            };
+          },
+        );
+
+        setActiveCollabs(mapped);
+      } catch (error) {
+        console.error("Failed to load active collaborations:", error);
+        setActiveCollabs([]);
+      }
+    }
+
+    async function loadNotifications() {
+      try {
+        const notifications = await apiRequest<NotificationResponse[]>(
+          "/notifications/projects",
+        );
+
+        const mapped: ActivityPost[] = (
+          Array.isArray(notifications) ? notifications : []
+        ).map((item, index) => {
+          const projectTitle = item.project?.title || "Project";
+          const notificationType = item.notificationType || "Update";
+
+          return {
+            id: index + 1,
+            orgName: projectTitle,
+            orgSubtitle:
+              notificationType.charAt(0).toUpperCase() +
+              notificationType.slice(1),
+            logoText: projectTitle.charAt(0).toUpperCase() || "P",
+            images: ["/feed/drone-1.jpg"],
+            text: buildNotificationText(item),
+            time: formatDisplayTime(item.notifiedAt),
+          };
+        });
+
+        setActivity(mapped);
+      } catch (error) {
+        console.error("Failed to load activity:", error);
+        setActivity([]);
+      }
+    }
+
+    loadProfile();
+    loadCohorts();
+    loadNotifications();
   }, []);
+
+  useEffect(() => {
+    const init: Record<number, number> = {};
+    for (const p of activity) {
+      init[p.id] = 0;
+    }
+    setImgIndexByPost(init);
+  }, [activity]);
 
   const headerSubtitle = useMemo(() => {
     return "Here are collaborations matched to your profile";
@@ -306,98 +344,109 @@ export default function HomePage() {
           </div>
 
           <div className="space-y-4">
-            {mockActivity.map((p) => {
-              const idx = imgIndexByPost[p.id] ?? 0;
-              const total = p.images.length;
+            {activity.length === 0 ? (
+              <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 shadow-sm">
+                <div className="font-semibold text-[var(--text-main)]">
+                  No activity yet
+                </div>
+                <div className="mt-1 text-sm text-[var(--text-muted-2)]">
+                  New collaboration notifications will appear here.
+                </div>
+              </div>
+            ) : (
+              activity.map((p) => {
+                const idx = imgIndexByPost[p.id] ?? 0;
+                const total = p.images.length;
 
-              return (
-                <div
-                  key={p.id}
-                  className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 shadow-sm"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--muted)] font-bold text-[var(--text-main)]">
-                        {p.logoText}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="truncate font-semibold text-[var(--text-main)]">
-                          {p.orgName}
+                return (
+                  <div
+                    key={p.id}
+                    className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--muted)] font-bold text-[var(--text-main)]">
+                          {p.logoText}
                         </div>
-                        <div className="text-xs text-[var(--text-muted-2)]">
-                          {p.orgSubtitle}
+                        <div className="min-w-0">
+                          <div className="truncate font-semibold text-[var(--text-main)]">
+                            {p.orgName}
+                          </div>
+                          <div className="text-xs text-[var(--text-muted-2)]">
+                            {p.orgSubtitle}
+                          </div>
                         </div>
                       </div>
+
+                      <span className="text-xs text-[var(--text-muted-2)]">
+                        {p.time}
+                      </span>
                     </div>
 
-                    <span className="text-xs text-[var(--text-muted-2)]">
-                      {p.time}
-                    </span>
-                  </div>
-
-                  <div className="relative mt-3 overflow-hidden rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)]">
-                    <div className="aspect-[16/10] w-full">
-                      <img
-                        src={p.images[idx]}
-                        alt="Activity"
-                        className="h-full w-full object-cover"
-                        draggable={false}
-                      />
-                    </div>
-
-                    {total > 1 && (
-                      <>
-                        <button
-                          onClick={() => prevImg(p.id, total)}
-                          className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--line-soft)] bg-white shadow"
-                          aria-label="Previous image"
-                          title="Previous"
-                        >
-                          ‹
-                        </button>
-                        <button
-                          onClick={() => nextImg(p.id, total)}
-                          className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--line-soft)] bg-white shadow"
-                          aria-label="Next image"
-                          title="Next"
-                        >
-                          ›
-                        </button>
-                      </>
-                    )}
-
-                    <div className="absolute bottom-3 left-3 right-3">
-                      <div className="flex items-center justify-end">
-                        <div className="rounded-full border border-[var(--line-soft)] bg-white px-2 py-1 text-[11px] font-semibold text-[var(--text-main)]">
-                          {idx + 1}/{total}
-                        </div>
+                    <div className="relative mt-3 overflow-hidden rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)]">
+                      <div className="aspect-[16/10] w-full">
+                        <img
+                          src={p.images[idx]}
+                          alt="Activity"
+                          className="h-full w-full object-cover"
+                          draggable={false}
+                        />
                       </div>
 
                       {total > 1 && (
-                        <div className="mt-2 flex items-center justify-center gap-1">
-                          {p.images.map((_, i) => (
-                            <button
-                              key={i}
-                              onClick={() => setImg(p.id, i)}
-                              className={[
-                                "h-1.5 rounded-full transition",
-                                i === idx ? "w-5 bg-white" : "w-2 bg-white/60",
-                              ].join(" ")}
-                              aria-label={`Go to image ${i + 1}`}
-                              title={`Image ${i + 1}`}
-                            />
-                          ))}
-                        </div>
+                        <>
+                          <button
+                            onClick={() => prevImg(p.id, total)}
+                            className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--line-soft)] bg-white shadow"
+                            aria-label="Previous image"
+                            title="Previous"
+                          >
+                            ‹
+                          </button>
+                          <button
+                            onClick={() => nextImg(p.id, total)}
+                            className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--line-soft)] bg-white shadow"
+                            aria-label="Next image"
+                            title="Next"
+                          >
+                            ›
+                          </button>
+                        </>
                       )}
-                    </div>
-                  </div>
 
-                  <p className="mt-3 text-sm text-[var(--text-muted-2)]">
-                    {p.text}
-                  </p>
-                </div>
-              );
-            })}
+                      <div className="absolute bottom-3 left-3 right-3">
+                        <div className="flex items-center justify-end">
+                          <div className="rounded-full border border-[var(--line-soft)] bg-white px-2 py-1 text-[11px] font-semibold text-[var(--text-main)]">
+                            {idx + 1}/{total}
+                          </div>
+                        </div>
+
+                        {total > 1 && (
+                          <div className="mt-2 flex items-center justify-center gap-1">
+                            {p.images.map((_, i) => (
+                              <button
+                                key={i}
+                                onClick={() => setImg(p.id, i)}
+                                className={[
+                                  "h-1.5 rounded-full transition",
+                                  i === idx ? "w-5 bg-white" : "w-2 bg-white/60",
+                                ].join(" ")}
+                                aria-label={`Go to image ${i + 1}`}
+                                title={`Image ${i + 1}`}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <p className="mt-3 text-sm text-[var(--text-muted-2)]">
+                      {p.text}
+                    </p>
+                  </div>
+                );
+              })
+            )}
           </div>
         </section>
       </div>

@@ -76,10 +76,12 @@ export function getProfileRoleLabel(): string {
 }
 
 export function getMyRequests(): CollaborationPost[] {
+  if (typeof window === "undefined") return [];
   return safeParse<CollaborationPost[]>(localStorage.getItem(MY_REQUESTS_KEY), []);
 }
 
 export function saveMyRequests(requests: CollaborationPost[]) {
+  if (typeof window === "undefined") return;
   localStorage.setItem(MY_REQUESTS_KEY, JSON.stringify(requests));
 }
 
@@ -88,19 +90,25 @@ export function addMyRequest(post: CollaborationPost) {
   saveMyRequests([post, ...current]);
 }
 
-export function getSavedRequestIds(): number[] {
-  return safeParse<number[]>(localStorage.getItem(SAVED_REQUESTS_KEY), []);
+export function getSavedRequestIds(): string[] {
+  if (typeof window === "undefined") return [];
+  const parsed = safeParse<unknown[]>(localStorage.getItem(SAVED_REQUESTS_KEY), []);
+  return Array.isArray(parsed) ? parsed.map(String) : [];
 }
 
-export function saveSavedRequestIds(ids: number[]) {
+export function saveSavedRequestIds(ids: string[]) {
+  if (typeof window === "undefined") return;
   localStorage.setItem(SAVED_REQUESTS_KEY, JSON.stringify(ids));
 }
 
-export function getAppliedRequestIds(): number[] {
-  return safeParse<number[]>(localStorage.getItem(APPLIED_REQUESTS_KEY), []);
+export function getAppliedRequestIds(): string[] {
+  if (typeof window === "undefined") return [];
+  const parsed = safeParse<unknown[]>(localStorage.getItem(APPLIED_REQUESTS_KEY), []);
+  return Array.isArray(parsed) ? parsed.map(String) : [];
 }
 
-export function saveAppliedRequestIds(ids: number[]) {
+export function saveAppliedRequestIds(ids: string[]) {
+  if (typeof window === "undefined") return;
   localStorage.setItem(APPLIED_REQUESTS_KEY, JSON.stringify(ids));
 }
 
@@ -177,7 +185,7 @@ export type RequestApplicantStatus = "Pending" | "Accepted" | "Rejected";
 
 export type RequestApplicant = {
   id: string;
-  requestId: number;
+  requestId: string;
   applicantName: string;
   applicantRole: string;
   applicantStatus: RequestApplicantStatus;
@@ -185,6 +193,7 @@ export type RequestApplicant = {
 };
 
 export function getRequestApplicants(): RequestApplicant[] {
+  if (typeof window === "undefined") return [];
   return safeParse<RequestApplicant[]>(
     localStorage.getItem(REQUEST_APPLICANTS_KEY),
     [],
@@ -192,11 +201,12 @@ export function getRequestApplicants(): RequestApplicant[] {
 }
 
 export function saveRequestApplicants(applicants: RequestApplicant[]) {
+  if (typeof window === "undefined") return;
   localStorage.setItem(REQUEST_APPLICANTS_KEY, JSON.stringify(applicants));
 }
 
 export function addRequestApplicant(input: {
-  requestId: number;
+  requestId: string;
   applicantName: string;
   applicantRole: string;
 }) {
@@ -226,7 +236,7 @@ export function addRequestApplicant(input: {
   return next;
 }
 
-export function removeRequestApplicant(requestId: number, applicantName: string) {
+export function removeRequestApplicant(requestId: string, applicantName: string) {
   const current = getRequestApplicants();
   const next = current.filter(
     (item) =>
@@ -235,7 +245,8 @@ export function removeRequestApplicant(requestId: number, applicantName: string)
   saveRequestApplicants(next);
   return next;
 }
-export function getApplicantsForRequest(requestId: number): RequestApplicant[] {
+
+export function getApplicantsForRequest(requestId: string): RequestApplicant[] {
   return getRequestApplicants().filter((item) => item.requestId === requestId);
 }
 
@@ -342,10 +353,12 @@ export function getStoredProjects(): StoredProjectItem[] {
 }
 
 export function saveStoredProjects(projects: StoredProjectItem[]) {
+  if (typeof window === "undefined") return;
   localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projects));
 }
 
 export function getActiveCollaborations(): ActiveCollabItem[] {
+  if (typeof window === "undefined") return [];
   return safeParse<ActiveCollabItem[]>(
     localStorage.getItem(ACTIVE_COLLABS_KEY),
     [],
@@ -353,6 +366,7 @@ export function getActiveCollaborations(): ActiveCollabItem[] {
 }
 
 export function saveActiveCollaborations(items: ActiveCollabItem[]) {
+  if (typeof window === "undefined") return;
   localStorage.setItem(ACTIVE_COLLABS_KEY, JSON.stringify(items));
 }
 
