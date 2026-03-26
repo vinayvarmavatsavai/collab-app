@@ -1,113 +1,126 @@
-// file: src/app/requests/[requestId]/applicants/page.tsx
-
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import {
-  createProjectFromAcceptedApplicant,
-  getApplicantsForRequest,
-  getMyRequests,
-  updateRequestApplicantStatus,
-  type CollaborationPost,
-  type RequestApplicant,
-} from "@/lib/collaboration";
+import { apiRequest } from "@/lib/api";
 
-export default function RequestApplicantsPage() {
-  const router = useRouter();
-  const params = useParams<{ requestId: string }>();
-  const requestId = Number(params?.requestId);
+type Applicant = {
+  id: string;
+  projectId: string;
+  userId: string;
+  interestText: string;
+  attachmentUrls?: string[];
+  relevanceScore?: number | null;
+  profileSimilarity?: number | null;
+  milestoneSimilarity?: number | null;
+  skillOverlap?: number | null;
+  createdAt?: string;
+  user?: {
+    id?: string;
+    firstname?: string;
+    lastname?: string;
+    headline?: string;
+    currentPosition?: string;
+    currentCompany?: string;
+  };
+};
 
-  const [myRequests, setMyRequests] = useState<CollaborationPost[]>([]);
-  const [applicants, setApplicants] = useState<RequestApplicant[]>([]);
+type ApplicantsEnvelope = {
+  interests?: Applicant[];
+  applicants?: Applicant[];
+};
 
-  useEffect(() => {
-    try {
-      setMyRequests(getMyRequests());
-    } catch {
-      setMyRequests([]);
-    }
-
-    if (!Number.isNaN(requestId)) {
-      try {
-        setApplicants(getApplicantsForRequest(requestId));
-      } catch {
-        setApplicants([]);
-      }
-    }
-  }, [requestId]);
-
-  const requestItem = useMemo(() => {
-    return myRequests.find((item) => item.id === requestId) || null;
-  }, [myRequests, requestId]);
-
-  const pendingApplicants = applicants.filter(
-    (item) => item.applicantStatus === "Pending",
-  );
-  const acceptedApplicants = applicants.filter(
-    (item) => item.applicantStatus === "Accepted",
-  );
-  const rejectedApplicants = applicants.filter(
-    (item) => item.applicantStatus === "Rejected",
-  );
-
-  function handleStatusChange(
-  applicant: RequestApplicant,
-  nextStatus: "Pending" | "Accepted" | "Rejected",
-) {
-  const nextAll = updateRequestApplicantStatus(applicant.id, nextStatus);
-  setApplicants(nextAll.filter((item) => item.requestId === requestId));
-
-  if (nextStatus === "Accepted" && requestItem) {
-    createProjectFromAcceptedApplicant({
-      request: requestItem,
-      applicant,
-    });
-  }
+function normalizeApplicantsResponse(
+  input: Applicant[] | ApplicantsEnvelope | null | undefined,
+): Applicant[] {
+  if (Array.isArray(input)) return input;
+  if (input && Array.isArray(input.interests)) return input.interests;
+  if (input && Array.isArray(input.applicants)) return input.applicants;
+  return [];
 }
 
-  if (!requestId || Number.isNaN(requestId)) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[#F4F6FB] px-4 text-slate-900">
-        <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <h1 className="text-2xl font-bold">Invalid request</h1>
-          <p className="mt-2 text-sm text-slate-500">
-            Request id is missing or invalid.
-          </p>
-          <Link
-            href="/explore"
-            className="mt-5 inline-flex rounded-xl bg-[#2D6BFF] px-4 py-2 text-sm font-semibold text-white"
-          >
-            Back to Explore
-          </Link>
-        </div>
-      </main>
+function percent(value?: number | null) {
+  if (typeof value !== "number" || Number.isNaN(value)) return "—";
+  return `${Math.round(value * 100)}%`;
+}
+
+export default function ApplicantsPage() {
+  const router = useRouter();
+  const params = useParams<{ requestId: string }>();
+  const requestId = String(params?.requestId || "");
+
+  const [applicants, setApplicants] = useState<Applicant[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [formingCohort, setFormingCohort] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function loadApplicants() {
+      if (!requestId) {
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError("");
+
+      try {
+        const res = await apiRequest<Applicant[] | ApplicantsEnvelope>(
+          `/project-interests/project/${requestId}`,
+        );
+        setApplicants(normalizeApplicantsResponse(res));
+      } catch (err) {
+        console.error("Failed to load applicants:", err);
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to load applicants.",
+        );
+        setApplicants([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadApplicants();
+  }, [requestId]);
+
+  function toggleSelect(userId: string) {
+    setSelectedIds((prev) =>
+      prev.includes(userId)
+        ? prev.filter((id) => id !== userId)
+        : [...prev, userId],
     );
   }
 
-  if (!requestItem) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[#F4F6FB] px-4 text-slate-900">
-        <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <h1 className="text-2xl font-bold">Request not found</h1>
-          <p className="mt-2 text-sm text-slate-500">
-            This page only works for requests you created.
-          </p>
-          <Link
-            href="/explore"
-            className="mt-5 inline-flex rounded-xl bg-[#2D6BFF] px-4 py-2 text-sm font-semibold text-white"
-          >
-            Back to Explore
-          </Link>
-        </div>
-      </main>
-    );
+  async function formCohort() {
+    if (!requestId || selectedIds.length === 0 || formingCohort) return;
+
+    setFormingCohort(true);
+    setError("");
+
+    try {
+      await apiRequest(`/cohorts/projects/${requestId}`, {
+        method: "POST",
+        body: {
+          memberIds: selectedIds,
+        },
+      });
+
+      router.push("/home");
+    } catch (err) {
+      console.error("Failed to form cohort:", err);
+      setError(err instanceof Error ? err.message : "Failed to form cohort.");
+    } finally {
+      setFormingCohort(false);
+    }
   }
 
   return (
     <main className="min-h-screen bg-[#F4F6FB] px-4 py-6 text-slate-900">
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto max-w-4xl">
         <div className="mb-5 flex items-center justify-between gap-3">
           <button
             onClick={() => router.back()}
@@ -116,116 +129,144 @@ export default function RequestApplicantsPage() {
             ← Back
           </button>
 
-          <Link
-            href={`/explore/${requestItem.id}`}
-            className="text-sm font-semibold text-[#2D6BFF]"
-          >
-            View Request
+          <Link href="/explore" className="text-sm font-semibold text-[#2D6BFF]">
+            Explore
           </Link>
         </div>
 
-        <section className="mb-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <div className="mb-2 inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-                Owner View
-              </div>
-              <h1 className="text-2xl font-bold">{requestItem.title}</h1>
-              <p className="mt-2 text-sm text-slate-500">
-                Manage applicants for your collaboration request
+              <h1 className="text-2xl font-bold">View Applicants</h1>
+              <p className="mt-1 text-sm text-slate-500">
+                Review applicants for this collaboration request.
               </p>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 sm:min-w-[260px]">
-              <div className="rounded-2xl bg-slate-50 p-4 text-center">
-                <p className="text-xs uppercase tracking-wide text-slate-500">
-                  Pending
-                </p>
-                <p className="mt-2 text-2xl font-bold">{pendingApplicants.length}</p>
-              </div>
-              <div className="rounded-2xl bg-slate-50 p-4 text-center">
-                <p className="text-xs uppercase tracking-wide text-slate-500">
-                  Accepted
-                </p>
-                <p className="mt-2 text-2xl font-bold">{acceptedApplicants.length}</p>
-              </div>
-              <div className="rounded-2xl bg-slate-50 p-4 text-center">
-                <p className="text-xs uppercase tracking-wide text-slate-500">
-                  Rejected
-                </p>
-                <p className="mt-2 text-2xl font-bold">{rejectedApplicants.length}</p>
+            <button
+              onClick={formCohort}
+              disabled={selectedIds.length === 0 || formingCohort}
+              className="rounded-xl bg-[#2D6BFF] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            >
+              {formingCohort ? "Forming..." : "Form Cohort"}
+            </button>
+          </div>
+
+          {error ? (
+            <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          ) : null}
+
+          {loading ? (
+            <div className="mt-6 space-y-4">
+              {[1, 2, 3].map((item) => (
+                <div
+                  key={item}
+                  className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                >
+                  <div className="h-5 w-1/3 rounded bg-slate-200" />
+                  <div className="mt-3 h-4 w-1/2 rounded bg-slate-200" />
+                  <div className="mt-4 h-16 rounded bg-slate-200" />
+                </div>
+              ))}
+            </div>
+          ) : applicants.length === 0 ? (
+            <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="font-semibold text-slate-900">No applicants yet</div>
+              <div className="mt-1 text-sm text-slate-500">
+                Once users apply, they will appear here.
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="mt-6 space-y-4">
+              {applicants.map((applicant) => {
+                const fullName =
+                  `${applicant.user?.firstname || ""} ${applicant.user?.lastname || ""}`.trim() ||
+                  "Applicant";
+
+                const role =
+                  applicant.user?.headline ||
+                  applicant.user?.currentPosition ||
+                  applicant.user?.currentCompany ||
+                  "Collaborator";
+
+                const isSelected = selectedIds.includes(applicant.userId);
+
+                return (
+                  <div
+                    key={applicant.id}
+                    className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                  >
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <div className="text-base font-bold text-slate-900">
+                          {fullName}
+                        </div>
+                        <div className="mt-1 text-sm text-slate-500">{role}</div>
+
+                        <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">
+                          {applicant.interestText || "No applicant note provided."}
+                        </p>
+
+                        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                          <div className="rounded-xl border border-slate-200 bg-white p-3">
+                            <div className="text-[11px] uppercase tracking-wide text-slate-500">
+                              Relevance
+                            </div>
+                            <div className="mt-1 text-sm font-semibold text-slate-900">
+                              {percent(applicant.relevanceScore)}
+                            </div>
+                          </div>
+
+                          <div className="rounded-xl border border-slate-200 bg-white p-3">
+                            <div className="text-[11px] uppercase tracking-wide text-slate-500">
+                              Profile
+                            </div>
+                            <div className="mt-1 text-sm font-semibold text-slate-900">
+                              {percent(applicant.profileSimilarity)}
+                            </div>
+                          </div>
+
+                          <div className="rounded-xl border border-slate-200 bg-white p-3">
+                            <div className="text-[11px] uppercase tracking-wide text-slate-500">
+                              Milestone
+                            </div>
+                            <div className="mt-1 text-sm font-semibold text-slate-900">
+                              {percent(applicant.milestoneSimilarity)}
+                            </div>
+                          </div>
+
+                          <div className="rounded-xl border border-slate-200 bg-white p-3">
+                            <div className="text-[11px] uppercase tracking-wide text-slate-500">
+                              Skill Overlap
+                            </div>
+                            <div className="mt-1 text-sm font-semibold text-slate-900">
+                              {percent(applicant.skillOverlap)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="shrink-0">
+                        <button
+                          onClick={() => toggleSelect(applicant.userId)}
+                          className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                            isSelected
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-[#2D6BFF] text-white"
+                          }`}
+                        >
+                          {isSelected ? "Selected ✓" : "Select"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </section>
-
-        {applicants.length === 0 ? (
-          <section className="rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-            <div className="text-3xl">🧑‍💻</div>
-            <h2 className="mt-3 text-xl font-bold">No applicants yet</h2>
-            <p className="mt-2 text-sm text-slate-500">
-              Once people apply to this request, they will appear here.
-            </p>
-          </section>
-        ) : (
-          <section className="space-y-4">
-            {applicants.map((applicant) => (
-              <div
-                key={applicant.id}
-                className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"
-              >
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <h2 className="text-lg font-bold text-slate-900">
-                      {applicant.applicantName}
-                    </h2>
-                    <p className="mt-1 text-sm text-slate-500">
-                      {applicant.applicantRole}
-                    </p>
-                    <p className="mt-2 text-xs text-slate-400">
-                      Applied on {new Date(applicant.appliedAt).toLocaleString()}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                        applicant.applicantStatus === "Accepted"
-                          ? "bg-emerald-100 text-emerald-700"
-                          : applicant.applicantStatus === "Rejected"
-                          ? "bg-red-100 text-red-700"
-                          : "bg-amber-100 text-amber-700"
-                      }`}
-                    >
-                      {applicant.applicantStatus}
-                    </span>
-
-                    <button
-                      onClick={() => handleStatusChange(applicant, "Accepted")}
-                      className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
-                    >
-                      Accept
-                    </button>
-
-                    <button
-                      onClick={() => handleStatusChange(applicant, "Rejected")}
-                      className="rounded-xl bg-red-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-red-700"
-                    >
-                      Reject
-                    </button>
-
-                    <button
-                      onClick={() => handleStatusChange(applicant, "Pending")}
-                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-                    >
-                      Mark Pending
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </section>
-        )}
       </div>
     </main>
   );

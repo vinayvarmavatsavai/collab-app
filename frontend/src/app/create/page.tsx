@@ -5,6 +5,7 @@ import Header from "../navigation/Header";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import BottomNav from "../navigation/BottomNav";
+import { apiRequest } from "@/lib/api";
 import {
   addMyRequest,
   deriveInterestTags,
@@ -15,10 +16,87 @@ import {
   type CollaborationPost,
 } from "@/lib/collaboration";
 
+type CreateProjectPayload = {
+  title: string;
+  description: string;
+  requiredSkills: string[];
+  requiredDomains: string[];
+  optionalSkills?: string[];
+  preferredExperienceLevel?: "junior" | "mid" | "senior" | "any";
+  maxCohortSize?: number;
+  visibilityMode?: "matching-only" | "open" | "hybrid";
+};
+
+type CreatedProjectResponse = {
+  id: string;
+  title: string;
+  description: string;
+  requiredSkills: string[];
+  requiredDomains: string[];
+  optionalSkills?: string[];
+  preferredExperienceLevel?: string | null;
+  maxCohortSize?: number;
+  visibilityMode?: "matching-only" | "open" | "hybrid";
+  status?: string;
+  createdAt?: string;
+};
+
+function mapExperienceToBackend(
+  value: string,
+): "junior" | "mid" | "senior" | "any" | undefined {
+  const normalized = value.trim().toLowerCase();
+
+  if (!normalized) return undefined;
+  if (normalized === "beginner") return "junior";
+  if (normalized === "intermediate") return "mid";
+  if (normalized === "advanced") return "senior";
+
+  return undefined;
+}
+
+function mapTypeToVisibilityMode(
+  value: string,
+): "matching-only" | "open" | "hybrid" {
+  if (value === "private") {
+    return "matching-only";
+  }
+
+  return "open";
+}
+
+function mapInterestTagsToDomains(tags: string[]): string[] {
+  const domainMap: Record<string, string> = {
+    robotics: "Robotics",
+    "data-science": "Data Science",
+    "web-dev": "Web Development",
+    design: "Design",
+    ai: "Artificial Intelligence",
+  };
+
+  const mapped = tags
+    .map((tag) => domainMap[tag] || tag)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  return Array.from(new Set(mapped));
+}
+
+function buildDescription(shortDesc: string, problem: string) {
+  const short = shortDesc.trim();
+  const prob = problem.trim();
+
+  if (short && prob) {
+    return `${short}\n\n${prob}`;
+  }
+
+  return short || prob;
+}
+
 export default function CreateCollaborationPage() {
   const router = useRouter();
 
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [form, setForm] = useState({
     title: "",
@@ -53,7 +131,7 @@ export default function CreateCollaborationPage() {
     setError("");
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     const trimmedTitle = form.title.trim();
     const trimmedShortDesc = form.shortDesc.trim();
     const trimmedProblem = form.problem.trim();
@@ -89,33 +167,64 @@ export default function CreateCollaborationPage() {
       .map((item) => item.trim())
       .filter(Boolean);
 
-    const existing = getMyRequests();
-
-    const createdPost: CollaborationPost = {
-      id: getNextRequestId(existing),
+    const interestTags = deriveInterestTags({
       title: trimmedTitle,
-      by: getProfileDisplayName(),
-      role: getProfileRoleLabel(),
       skills: skillsArray,
-      type: form.type === "public" ? "Public" : "Private",
-      mode: "Online",
-      hours: form.hours,
-      interestTags: deriveInterestTags({
-        title: trimmedTitle,
-        skills: skillsArray,
-        problem: trimmedProblem,
-      }),
-      shortDesc: trimmedShortDesc,
       problem: trimmedProblem,
-      experience: form.experience,
-      duration: form.duration.trim(),
-      compensation: form.compensation,
-      createdAt: new Date().toISOString(),
+    });
+
+    const requiredDomains = mapInterestTagsToDomains(interestTags);
+
+    const payload: CreateProjectPayload = {
+      title: trimmedTitle,
+      description: buildDescription(trimmedShortDesc, trimmedProblem),
+      requiredSkills: skillsArray,
+      requiredDomains,
+      optionalSkills: [],
+      preferredExperienceLevel: mapExperienceToBackend(form.experience),
+      maxCohortSize: 5,
+      visibilityMode: mapTypeToVisibilityMode(form.type),
     };
 
-    addMyRequest(createdPost);
-    resetForm();
-    router.push("/explore");
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      const created = await apiRequest<CreatedProjectResponse>("/projects", {
+        method: "POST",
+        body: payload,
+      });
+
+      const existing = getMyRequests();
+
+      const createdPost: CollaborationPost = {
+        id: getNextRequestId(existing),
+        title: created.title || trimmedTitle,
+        by: getProfileDisplayName(),
+        role: getProfileRoleLabel(),
+        skills: created.requiredSkills?.length ? created.requiredSkills : skillsArray,
+        type: form.type === "public" ? "Public" : "Private",
+        mode: "Online",
+        hours: form.hours,
+        interestTags,
+        shortDesc: trimmedShortDesc,
+        problem: trimmedProblem,
+        experience: form.experience,
+        duration: form.duration.trim(),
+        compensation: form.compensation,
+        createdAt: created.createdAt || new Date().toISOString(),
+      };
+
+      addMyRequest(createdPost);
+      resetForm();
+      router.push("/explore");
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to create collaboration.";
+      setError(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -270,9 +379,10 @@ export default function CreateCollaborationPage() {
 
         <button
           onClick={handleSubmit}
-          className="sync-theme-primary-btn mt-6 h-12 w-full rounded-2xl font-extrabold shadow-sm"
+          disabled={isSubmitting}
+          className="sync-theme-primary-btn mt-6 h-12 w-full rounded-2xl font-extrabold shadow-sm disabled:opacity-60"
         >
-          Create Collaboration →
+          {isSubmitting ? "Creating..." : "Create Collaboration →"}
         </button>
       </div>
 
