@@ -47,6 +47,7 @@ import {
   type ProjectItem,
   type TaskItem,
 } from "../data";
+import ProjectMilestones from "../components/ProjectMilestones";
 
 type TaskStatus = "Backlog" | "Todo" | "In Progress" | "Review" | "Done";
 type TaskPriority = "Low" | "Medium" | "High";
@@ -57,16 +58,6 @@ type WorkspaceTab =
   | "Updates"
   | "Milestones"
   | "Team";
-
-type MilestoneStatus = "Upcoming" | "In Progress" | "Completed";
-type MilestoneHealth = "On Track" | "At Risk" | "Blocked";
-
-type ComputedMilestone = MilestoneItem & {
-  linkedTasks: TaskItem[];
-  progress: number;
-  status: MilestoneStatus;
-  health: MilestoneHealth;
-};
 
 type BoardColumnItem = {
   id: TaskStatus;
@@ -102,38 +93,6 @@ function getPriorityClasses(priority: TaskPriority) {
   return "border border-[var(--line-soft)] bg-[var(--surface-solid)] text-[var(--text-muted-2)]";
 }
 
-function getMilestonePriorityClasses(priority: MilestonePriority) {
-  if (priority === "Critical") {
-    return "border border-[var(--danger-soft-border)] bg-[var(--danger-soft-bg)] text-[var(--danger-soft-text)]";
-  }
-  if (priority === "High") {
-    return "border border-[var(--line-soft)] bg-[var(--muted)] text-[var(--text-main)]";
-  }
-  if (priority === "Medium") {
-    return "border border-[var(--line-soft)] bg-[var(--surface-solid)] text-[var(--text-main)]";
-  }
-  return "border border-[var(--line-soft)] bg-[var(--surface-solid)] text-[var(--text-muted-2)]";
-}
-
-function getMilestoneStatusClasses(status: MilestoneStatus) {
-  if (status === "Completed") {
-    return "border border-[var(--line-soft)] bg-[var(--surface-solid)] text-[var(--text-main)]";
-  }
-  if (status === "In Progress") {
-    return "border border-[var(--line-soft)] bg-[var(--muted)] text-[var(--text-main)]";
-  }
-  return "border border-[var(--line-soft)] bg-[var(--surface-solid)] text-[var(--text-muted-2)]";
-}
-
-function getMilestoneHealthClasses(health: MilestoneHealth) {
-  if (health === "Blocked") {
-    return "border border-[var(--danger-soft-border)] bg-[var(--danger-soft-bg)] text-[var(--danger-soft-text)]";
-  }
-  if (health === "At Risk") {
-    return "border border-[var(--line-soft)] bg-[var(--muted)] text-[var(--text-main)]";
-  }
-  return "border border-[var(--line-soft)] bg-[var(--surface-solid)] text-[var(--text-main)]";
-}
 
 function getStatusClasses(status: TaskStatus) {
   if (status === "Done") {
@@ -197,47 +156,6 @@ function getDueDateLabel(dueDate: string) {
   if (state === "upcoming") return `Upcoming • ${dueDate}`;
 
   return dueDate;
-}
-
-function calculateMilestoneProgress(linkedTasks: TaskItem[]) {
-  if (linkedTasks.length === 0) return 0;
-  const doneCount = linkedTasks.filter((task) => task.status === "Done").length;
-  return Math.round((doneCount / linkedTasks.length) * 100);
-}
-
-function calculateMilestoneStatus(
-  linkedTasks: TaskItem[],
-  progress: number,
-): MilestoneStatus {
-  if (linkedTasks.length === 0) return "Upcoming";
-  if (progress === 100) return "Completed";
-
-  const hasStarted = linkedTasks.some((task) =>
-    ["In Progress", "Review", "Done"].includes(task.status),
-  );
-
-  return hasStarted ? "In Progress" : "Upcoming";
-}
-
-function calculateMilestoneHealth(
-  dueDate: string,
-  progress: number,
-  linkedTasks: TaskItem[],
-): MilestoneHealth {
-  const today = getDateOnlyString(new Date());
-
-  if (linkedTasks.length === 0) return "On Track";
-  if (progress === 100) return "On Track";
-
-  const hasBlockedPattern = linkedTasks.some(
-    (task) =>
-      getDueDateState(task.dueDate) === "overdue" && task.status !== "Done",
-  );
-
-  if (hasBlockedPattern) return "Blocked";
-  if (dueDate < today && progress < 100) return "At Risk";
-
-  return "On Track";
 }
 
 function calculateProjectProgress(tasks: TaskItem[]) {
@@ -529,7 +447,7 @@ export default function ProjectWorkspacePage() {
 
   const [isDeleteMilestoneOpen, setIsDeleteMilestoneOpen] = useState(false);
   const [milestoneToDelete, setMilestoneToDelete] =
-    useState<ComputedMilestone | null>(null);
+    useState<MilestoneItem | null>(null);
 
   const [activeDragTask, setActiveDragTask] = useState<TaskItem | null>(null);
 
@@ -607,40 +525,6 @@ export default function ProjectWorkspacePage() {
 
     return matchesSearch && matchesStatus && matchesPriority && matchesAssignee;
   });
-
-  const computedMilestones: ComputedMilestone[] = [...projectState.milestones]
-    .map((milestone) => {
-      const linkedTasks = projectState.tasks.filter((task) =>
-        milestone.linkedTaskIds.includes(task.id),
-      );
-
-      const progress = calculateMilestoneProgress(linkedTasks);
-      const status = calculateMilestoneStatus(linkedTasks, progress);
-      const health = calculateMilestoneHealth(
-        milestone.dueDate,
-        progress,
-        linkedTasks,
-      );
-
-      return {
-        ...milestone,
-        linkedTasks,
-        progress,
-        status,
-        health,
-      };
-    })
-    .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-
-  const completedMilestones = computedMilestones.filter(
-    (milestone) => milestone.status === "Completed",
-  );
-  const inProgressMilestones = computedMilestones.filter(
-    (milestone) => milestone.status === "In Progress",
-  );
-  const upcomingMilestones = computedMilestones.filter(
-    (milestone) => milestone.status === "Upcoming",
-  );
 
   const boardColumns: BoardColumnItem[] = [
     {
@@ -813,7 +697,7 @@ function getNextMilestoneId() {
     setEditMilestoneError("");
   }
 
-  function openDeleteMilestoneModal(milestone: ComputedMilestone) {
+  function openDeleteMilestoneModal(milestone: MilestoneItem) {
     setMilestoneToDelete(milestone);
     setIsDeleteMilestoneOpen(true);
   }
@@ -1410,7 +1294,7 @@ setProjectState({
                         Milestones
                       </p>
                       <h3 className="mt-1 text-2xl font-bold text-[var(--text-main)]">
-                        {computedMilestones.length}
+                        {projectState.milestones.length}
                       </h3>
                     </div>
                     <div className="rounded-xl border border-[var(--line-soft)] bg-[var(--muted)] p-3 text-[var(--text-main)]">
@@ -1966,56 +1850,6 @@ setProjectState({
 
         {activeTab === "Milestones" && (
           <section className="space-y-6">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-5 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-[var(--text-muted-2)]">
-                      Completed
-                    </p>
-                    <h3 className="mt-1 text-2xl font-bold text-[var(--text-main)]">
-                      {completedMilestones.length}
-                    </h3>
-                  </div>
-                  <div className="rounded-xl border border-[var(--line-soft)] bg-[var(--muted)] p-3 text-[var(--text-main)]">
-                    <CheckCircle2 size={20} />
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-5 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-[var(--text-muted-2)]">
-                      In Progress
-                    </p>
-                    <h3 className="mt-1 text-2xl font-bold text-[var(--text-main)]">
-                      {inProgressMilestones.length}
-                    </h3>
-                  </div>
-                  <div className="rounded-xl border border-[var(--line-soft)] bg-[var(--muted)] p-3 text-[var(--text-main)]">
-                    <Clock3 size={20} />
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-5 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-[var(--text-muted-2)]">
-                      Upcoming
-                    </p>
-                    <h3 className="mt-1 text-2xl font-bold text-[var(--text-main)]">
-                      {upcomingMilestones.length}
-                    </h3>
-                  </div>
-                  <div className="rounded-xl border border-[var(--line-soft)] bg-[var(--muted)] p-3 text-[var(--text-main)]">
-                    <Target size={20} />
-                  </div>
-                </div>
-              </div>
-            </div>
-
             <div className="rounded-[28px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-5 shadow-sm">
               <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -2023,7 +1857,7 @@ setProjectState({
                     Milestones Roadmap
                   </h2>
                   <p className="text-sm text-[var(--text-muted-2)]">
-                    Major goals linked to actual project tasks
+                    Full project history in a responsive timeline
                   </p>
                 </div>
 
@@ -2035,7 +1869,7 @@ setProjectState({
                 </button>
               </div>
 
-              {computedMilestones.length === 0 ? (
+              {projectState.milestones.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-[var(--line-soft)] bg-[var(--muted)] p-10 text-center">
                   <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] text-[var(--text-muted-2)] shadow-sm">
                     <Target size={24} />
@@ -2054,164 +1888,11 @@ setProjectState({
                   </button>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {computedMilestones.map((milestone, index) => (
-                    <div
-                      key={milestone.id}
-                      className="rounded-[28px] border border-[var(--line-soft)] bg-[var(--muted)] p-5"
-                    >
-                      <div className="flex flex-col gap-4">
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                          <div className="flex min-w-0 items-start gap-4">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] text-[var(--text-main)] shadow-sm">
-                              <span className="text-sm font-bold">{index + 1}</span>
-                            </div>
-
-                            <div className="min-w-0">
-                              <p className="text-lg font-semibold text-[var(--text-main)]">
-                                {milestone.title}
-                              </p>
-                              <p className="mt-2 text-sm leading-6 text-[var(--text-muted-2)]">
-                                {milestone.description}
-                              </p>
-
-                              <div className="mt-3 flex flex-wrap items-center gap-2">
-                                <span className="inline-flex items-center gap-1 rounded-full border border-[var(--line-soft)] bg-[var(--surface-solid)] px-3 py-1 text-xs font-medium text-[var(--text-main)]">
-                                  <CalendarDays size={12} />
-                                  Due: {milestone.dueDate}
-                                </span>
-
-                                <span className="inline-flex rounded-full border border-[var(--line-soft)] bg-[var(--surface-solid)] px-3 py-1 text-xs font-medium text-[var(--text-main)]">
-                                  Owner: {milestone.owner}
-                                </span>
-
-                                <span
-                                  className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getMilestonePriorityClasses(
-                                    milestone.priority,
-                                  )}`}
-                                >
-                                  {milestone.priority}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex flex-wrap items-start justify-end gap-2">
-                            <span
-                              className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getMilestoneStatusClasses(
-                                milestone.status,
-                              )}`}
-                            >
-                              {milestone.status}
-                            </span>
-
-                            <span
-                              className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getMilestoneHealthClasses(
-                                milestone.health,
-                              )}`}
-                            >
-                              {milestone.health}
-                            </span>
-
-                            <button
-                              onClick={() => openEditMilestoneModal(milestone)}
-                              className="inline-flex items-center gap-1 rounded-xl border border-[var(--line-soft)] bg-[var(--surface-solid)] px-2.5 py-1 text-xs font-medium text-[var(--text-main)] transition hover:opacity-80"
-                            >
-                              <Pencil size={12} />
-                              Edit
-                            </button>
-
-                            <button
-                              onClick={() => openDeleteMilestoneModal(milestone)}
-                              className="inline-flex items-center gap-1 rounded-xl border border-[var(--danger-soft-border)] bg-[var(--danger-soft-bg)] px-2.5 py-1 text-xs font-medium text-[var(--danger-soft-text)] transition hover:opacity-80"
-                            >
-                              <Trash2 size={12} />
-                              Delete
-                            </button>
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="mb-2 flex items-center justify-between text-sm">
-                            <span className="font-medium text-[var(--text-main)]">
-                              Progress
-                            </span>
-                            <span className="font-semibold text-[var(--text-main)]">
-                              {milestone.progress}%
-                            </span>
-                          </div>
-
-                          <div className="h-2.5 rounded-full bg-[var(--line-soft)]">
-                            <div
-                              className="h-2.5 rounded-full bg-[var(--text-main)] transition-all"
-                              style={{ width: `${milestone.progress}%` }}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                          <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 shadow-sm">
-                            <p className="text-xs uppercase tracking-wide text-[var(--text-muted-2)]">
-                              Linked Tasks
-                            </p>
-                            <p className="mt-2 text-xl font-bold text-[var(--text-main)]">
-                              {milestone.linkedTasks.length}
-                            </p>
-                          </div>
-
-                          <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 shadow-sm">
-                            <p className="text-xs uppercase tracking-wide text-[var(--text-muted-2)]">
-                              Done Tasks
-                            </p>
-                            <p className="mt-2 text-xl font-bold text-[var(--text-main)]">
-                              {
-                                milestone.linkedTasks.filter(
-                                  (task) => task.status === "Done",
-                                ).length
-                              }
-                            </p>
-                          </div>
-
-                          <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 shadow-sm">
-                            <p className="text-xs uppercase tracking-wide text-[var(--text-muted-2)]">
-                              Remaining
-                            </p>
-                            <p className="mt-2 text-xl font-bold text-[var(--text-main)]">
-                              {
-                                milestone.linkedTasks.filter(
-                                  (task) => task.status !== "Done",
-                                ).length
-                              }
-                            </p>
-                          </div>
-                        </div>
-
-                        {milestone.linkedTasks.length > 0 ? (
-                          <div className="rounded-2xl border border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 shadow-sm">
-                            <p className="mb-3 text-sm font-semibold text-[var(--text-main)]">
-                              Linked Task Titles
-                            </p>
-
-                            <div className="flex flex-wrap gap-2">
-                              {milestone.linkedTasks.map((task) => (
-                                <span
-                                  key={task.id}
-                                  className="inline-flex rounded-full border border-[var(--line-soft)] bg-[var(--muted)] px-3 py-1 text-xs font-medium text-[var(--text-main)]"
-                                >
-                                  {task.title}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="rounded-2xl border border-dashed border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 text-sm text-[var(--text-muted-2)]">
-                            No linked tasks yet for this milestone.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <ProjectMilestones
+                  milestones={projectState.milestones}
+                  onEdit={openEditMilestoneModal}
+                  onDelete={openDeleteMilestoneModal}
+                />
               )}
             </div>
           </section>
@@ -3193,7 +2874,7 @@ setProjectState({
                 Owner: {milestoneToDelete.owner}
               </p>
               <p className="mt-1 text-sm text-[var(--text-muted-2)]">
-                Linked tasks: {milestoneToDelete.linkedTasks.length}
+                Linked tasks: {milestoneToDelete.linkedTaskIds.length}
               </p>
             </div>
 
