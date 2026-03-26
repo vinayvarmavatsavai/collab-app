@@ -3,15 +3,38 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
+import Header from "../navigation/Header";
+import BottomNav from "../navigation/BottomNav";
+import { getStoredIdentity } from "@/lib/auth";
+
+type FooterTab = "home" | "offerings" | "explore" | "events" | "messages";
 
 export default function QrPage() {
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const [footerTab, setFooterTab] = useState<FooterTab>("home");
   const [profileUrl, setProfileUrl] = useState("");
+  const [displayName, setDisplayName] = useState("My Profile");
+  const [copyLabel, setCopyLabel] = useState("Copy");
+  const [error, setError] = useState("");
+
+  const go = (path: string, tab?: FooterTab) => {
+    if (tab) setFooterTab(tab);
+    router.push(path);
+  };
 
   useEffect(() => {
-    const url = `${window.location.origin}/profile/Rahul`; // dynamic later
+    const identity = getStoredIdentity();
+
+    if (!identity?.username) {
+      setError("No username found for this account.");
+      return;
+    }
+
+    const url = `${window.location.origin}/u/${identity.username}`;
     setProfileUrl(url);
+    setDisplayName(identity.username);
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -23,23 +46,40 @@ export default function QrPage() {
         dark: "#000000",
         light: "#ffffff",
       },
+    }).catch((err) => {
+      console.error("QR generation failed", err);
+      setError("Failed to generate QR code.");
     });
   }, []);
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(profileUrl);
-    alert("Profile link copied!");
+    if (!profileUrl) return;
+
+    try {
+      await navigator.clipboard.writeText(profileUrl);
+      setCopyLabel("Copied");
+      setTimeout(() => setCopyLabel("Copy"), 1500);
+    } catch (err) {
+      console.error("Copy failed", err);
+      alert("Could not copy the link.");
+    }
   };
 
   const handleShare = async () => {
-    if (navigator.share) {
-      await navigator.share({
-        title: "My Profile QR",
-        text: "Scan my profile QR",
-        url: profileUrl,
-      });
-    } else {
-      alert("Sharing not supported on this device.");
+    if (!profileUrl) return;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "My SphereNet Profile",
+          text: `Check out ${displayName}'s SphereNet profile`,
+          url: profileUrl,
+        });
+      } else {
+        alert("Sharing not supported on this device.");
+      }
+    } catch (err) {
+      console.error("Share failed", err);
     }
   };
 
@@ -48,71 +88,86 @@ export default function QrPage() {
     if (!canvas) return;
 
     const link = document.createElement("a");
-    link.download = "profile-qr.png";
-    link.href = canvas.toDataURL();
+    link.download = "spherenet-public-profile-qr.png";
+    link.href = canvas.toDataURL("image/png");
     link.click();
   };
 
   return (
-    <div className="min-h-screen pb-24 bg-[#F4F6FB] text-slate-900">
+    <div className="sync-theme-page min-h-screen pb-24">
+      <Header
+        title="Scan Me!"
+        subtitle="Share your public profile instantly"
+        variant="profile"
+      />
 
-      {/* Header (matched with Home / Explore style) */}
-      <div className="sticky top-0 z-30 bg-white border-b border-slate-200 px-4 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-[20px] font-extrabold">Scan Me!</div>
-            <div className="text-sm text-slate-500">
-              Share your profile instantly
+      <div className="mx-auto w-full max-w-[480px] px-4 py-5">
+        {error ? (
+          <div className="mb-4 rounded-[22px] border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        ) : null}
+
+        <div className="rounded-[28px] border border-[var(--line-soft)] bg-[var(--surface-solid)] p-4 shadow-sm">
+          <div className="text-center">
+            <div className="text-base font-bold text-[var(--text-main)]">
+              @{displayName}
+            </div>
+            <div className="mt-1 text-sm text-[var(--text-muted-2)]">
+              Public SphereNet profile
             </div>
           </div>
 
-          <button
-            onClick={() => router.back()}
-            className="text-sm font-semibold text-[#2D6BFF]"
-          >
-            Back
-          </button>
+          <div className="mt-5 rounded-[26px] border border-[var(--line-soft)] bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-center">
+              <canvas ref={canvasRef} />
+            </div>
+          </div>
+
+          <p className="mt-4 break-all text-center text-sm text-[var(--text-muted-2)]">
+            {profileUrl || "Preparing your public profile link..."}
+          </p>
+
+          <div className="mt-5 grid grid-cols-3 gap-2.5">
+            <button
+              onClick={handleCopy}
+              disabled={!profileUrl}
+              className="rounded-[18px] bg-[var(--muted)] px-4 py-3 text-sm font-semibold text-[var(--text-main)] disabled:opacity-50"
+              type="button"
+            >
+              {copyLabel}
+            </button>
+
+            <button
+              onClick={handleShare}
+              disabled={!profileUrl}
+              className="rounded-[18px] bg-[var(--primary-btn-bg)] px-4 py-3 text-sm font-semibold text-[var(--primary-btn-text)] disabled:opacity-50"
+              type="button"
+            >
+              Share
+            </button>
+
+            <button
+              onClick={handleDownload}
+              className="rounded-[18px] bg-[var(--muted)] px-4 py-3 text-sm font-semibold text-[var(--text-main)]"
+              type="button"
+            >
+              Download
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-[24px] border border-[var(--line-soft)] bg-[var(--surface-solid)] px-4 py-3 shadow-sm">
+          <div className="text-sm font-semibold text-[var(--text-main)]">
+            Shareable link
+          </div>
+          <div className="mt-1 text-sm text-[var(--text-muted-2)]">
+            Anyone with this QR can open your public SphereNet profile.
+          </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="px-4 py-8 flex flex-col items-center">
-
-        {/* QR Card */}
-        <div className="bg-white p-6 rounded-3xl shadow-md border border-slate-200">
-          <canvas ref={canvasRef} />
-        </div>
-
-        {/* Profile Link */}
-        <p className="mt-6 text-sm text-slate-500 break-all text-center">
-          {profileUrl}
-        </p>
-
-        {/* Actions */}
-        <div className="flex gap-3 mt-6 flex-wrap justify-center">
-          <button
-            onClick={handleCopy}
-            className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold"
-          >
-            Copy
-          </button>
-
-          <button
-            onClick={handleShare}
-            className="px-4 py-2 rounded-xl bg-[#2D6BFF] text-white text-sm font-semibold"
-          >
-            Share
-          </button>
-
-          <button
-            onClick={handleDownload}
-            className="px-4 py-2 rounded-xl bg-slate-200 text-slate-800 text-sm font-semibold"
-          >
-            Download
-          </button>
-        </div>
-      </div>
-
+      <BottomNav />
     </div>
   );
 }

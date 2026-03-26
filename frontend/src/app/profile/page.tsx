@@ -95,9 +95,8 @@ type UserProfileResponse = {
 };
 
 type ProfileCompletenessResponse = {
-  profileCompleteness?: number;
   completeness?: number;
-  percentage?: number;
+  suggestions?: string[];
 };
 
 type ProfileInfo = {
@@ -214,7 +213,9 @@ export default function ProfilePage() {
               method: "GET",
               token,
             }
-          ).catch(() => ({ profileCompleteness: 20 })),
+          ).catch(
+            (): ProfileCompletenessResponse => ({ completeness: 20 })
+          ),
         ]);
 
         const fullName =
@@ -223,10 +224,7 @@ export default function ProfilePage() {
 
         const roleText =
           profileResponse.headline ||
-          [
-            profileResponse.currentPosition,
-            profileResponse.currentCompany,
-          ]
+          [profileResponse.currentPosition, profileResponse.currentCompany]
             .filter(Boolean)
             .join(" • ") ||
           profileResponse.intent ||
@@ -243,23 +241,21 @@ export default function ProfilePage() {
         });
 
         const normalizedSkills =
-          profileResponse.userSkills?.map((item) => {
-            return (
-              item?.canonicalSkill?.name ||
-              item?.skill?.name ||
-              item?.name ||
-              ""
-            );
-          }).filter(Boolean) ||
-          profileResponse.skills ||
-          [];
+          profileResponse.userSkills
+            ?.map((item) => {
+              return (
+                item?.canonicalSkill?.name ||
+                item?.skill?.name ||
+                item?.name ||
+                ""
+              );
+            })
+            .filter(Boolean) || profileResponse.skills || [];
 
         setSkillsData(normalizedSkills);
 
         setProfileCompleteness(
-          completenessResponse.profileCompleteness ??
-            completenessResponse.completeness ??
-            completenessResponse.percentage ??
+          completenessResponse.completeness ??
             profileResponse.profileCompleteness ??
             20
         );
@@ -291,7 +287,10 @@ export default function ProfilePage() {
 
     return Math.min(
       100,
-      40 + completedMilestones * 8 + historyCompleted * 6 + Math.min(skillsCount, 8) * 2
+      40 +
+        completedMilestones * 8 +
+        historyCompleted * 6 +
+        Math.min(skillsCount, 8) * 2
     );
   }, [skillsData]);
 
@@ -521,13 +520,6 @@ export default function ProfilePage() {
             )}
           </div>
         </div>
-
-        <button
-          onClick={() => alert("Invite sent (demo)")}
-          className="h-12 w-full rounded-[22px] bg-[var(--primary-btn-bg)] font-extrabold text-[var(--primary-btn-text)] shadow-md active:scale-[0.99]"
-        >
-          Invite to Collaboration
-        </button>
       </div>
 
       <BottomNav />

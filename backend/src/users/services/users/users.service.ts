@@ -37,7 +37,7 @@ export class UsersService {
         private readonly canonicalDomainService: CanonicalDomainService,
         private readonly canonicalSkillService: CanonicalSkillService,
         @Inject(forwardRef(() => BackgroundJobsService))
-        private readonly backgroundJobs?: BackgroundJobsService, // Optional to maintain backward compatibility
+        private readonly backgroundJobs?: BackgroundJobsService,
     ) { }
 
     async createUserProfile(
@@ -81,17 +81,14 @@ export class UsersService {
 
         Object.assign(profile, updateData);
 
-        // Recalculate profile completeness
         profile.profileCompleteness = this.calculateProfileCompleteness(profile);
 
-        // Auto-complete onboarding if profile is sufficiently filled
         if (profile.profileCompleteness >= 50 && !profile.onboardingCompleted) {
             profile.onboardingCompleted = true;
         }
 
         const savedProfile = await this.repo.save(profile);
 
-        // NON-BLOCKING: Queue profile vector update if relevant fields changed
         if (this.backgroundJobs && typeof this.backgroundJobs.queueProfileVectorUpdate === 'function') {
             const relevantFields = ['skills', 'domains', 'bio', 'headline', 'intent', 'location', 'interests'];
             const shouldUpdate = relevantFields.some(field => Object.keys(updateData).includes(field));
@@ -175,6 +172,64 @@ export class UsersService {
         };
     }
 
+    // PUBLIC SAFE PROFILE FOR QR / SHARE LINKS
+    async getPublicProfileByUsername(username: string) {
+        const identity = await this.identityRepo.findOne({
+            where: { username },
+            select: ['id', 'username', 'createdAt'],
+        });
+
+        if (!identity) {
+            throw new NotFoundException('User not found');
+        }
+
+        const profile = await this.repo.findOne({
+            where: { identityId: identity.id },
+            relations: [
+                'primaryRole',
+                'userRoles',
+                'userRoles.role',
+                'userDomains',
+                'userDomains.domain',
+                'userSkills',
+                'userSkills.canonicalSkill',
+            ],
+        });
+
+        if (!profile) {
+            throw new NotFoundException('User profile not found');
+        }
+
+        return {
+            username: identity.username,
+            createdAt: identity.createdAt,
+            firstname: profile.firstname,
+            lastname: profile.lastname,
+            headline: profile.headline,
+            bio: profile.bio,
+            intent: profile.intent,
+            location: profile.location,
+            website: profile.website,
+            currentCompany: profile.currentCompany,
+            currentPosition: profile.currentPosition,
+            profilePicture: profile.profilePicture,
+            coverPhoto: profile.coverPhoto,
+            profileCompleteness: profile.profileCompleteness,
+            skills: (profile.userSkills || [])
+                .map((item) => item.canonicalSkill?.name)
+                .filter(Boolean),
+            roles: (profile.userRoles || [])
+                .map((item) => item.role?.name)
+                .filter(Boolean),
+            domains: (profile.userDomains || [])
+                .map((item) => item.domain?.name)
+                .filter(Boolean),
+            projects: profile.projects || [],
+            collaborationGoals: profile.collaborationGoals,
+            profileSummaryText: profile.profileSummaryText,
+        };
+    }
+
     async getProfileByUserId(userId: string) {
         const profile = await this.repo.findOne({
             where: { id: userId },
@@ -209,7 +264,6 @@ export class UsersService {
         };
     }
 
-    // Experience management
     async addExperience(identityId: string, experienceData: any) {
         const profile = await this.getUserProfileById(identityId);
         const experience = profile.experience || [];
@@ -224,7 +278,6 @@ export class UsersService {
 
         const savedProfile = await this.repo.save(profile);
 
-        // Queue vector update
         if (this.backgroundJobs) {
             this.backgroundJobs.queueProfileVectorUpdate(savedProfile.id).catch(e => console.error(e));
         }
@@ -246,7 +299,6 @@ export class UsersService {
 
         const savedProfile = await this.repo.save(profile);
 
-        // Queue vector update
         if (this.backgroundJobs) {
             this.backgroundJobs.queueProfileVectorUpdate(savedProfile.id).catch(e => console.error(e));
         }
@@ -263,7 +315,6 @@ export class UsersService {
 
         const savedProfile = await this.repo.save(profile);
 
-        // Queue vector update
         if (this.backgroundJobs) {
             this.backgroundJobs.queueProfileVectorUpdate(savedProfile.id).catch(e => console.error(e));
         }
@@ -271,7 +322,6 @@ export class UsersService {
         return savedProfile;
     }
 
-    // Education management
     async addEducation(identityId: string, educationData: any) {
         const profile = await this.getUserProfileById(identityId);
         const education = profile.education || [];
@@ -286,7 +336,6 @@ export class UsersService {
 
         const savedProfile = await this.repo.save(profile);
 
-        // Queue vector update
         if (this.backgroundJobs) {
             this.backgroundJobs.queueProfileVectorUpdate(savedProfile.id).catch(e => console.error(e));
         }
@@ -308,7 +357,6 @@ export class UsersService {
 
         const savedProfile = await this.repo.save(profile);
 
-        // Queue vector update
         if (this.backgroundJobs) {
             this.backgroundJobs.queueProfileVectorUpdate(savedProfile.id).catch(e => console.error(e));
         }
@@ -325,7 +373,6 @@ export class UsersService {
 
         const savedProfile = await this.repo.save(profile);
 
-        // Queue vector update
         if (this.backgroundJobs) {
             this.backgroundJobs.queueProfileVectorUpdate(savedProfile.id).catch(e => console.error(e));
         }
@@ -333,7 +380,6 @@ export class UsersService {
         return savedProfile;
     }
 
-    // Certification management
     async addCertification(identityId: string, certificationData: any) {
         const profile = await this.getUserProfileById(identityId);
         const certifications = profile.certifications || [];
@@ -359,9 +405,8 @@ export class UsersService {
         return this.repo.save(profile);
     }
 
-    // Profile completeness calculation
     calculateProfileCompleteness(profile: UserProfile): number {
-        let score = 20; // Basic info (name, email) - auto-filled
+        let score = 20;
 
         if (profile.headline) score += 10;
         if (profile.bio) score += 10;
@@ -398,11 +443,9 @@ export class UsersService {
         return suggestions;
     }
 
-    // Domain Management
     async addUserDomain(identityId: string, domainName: string) {
         const profile = await this.getUserProfileById(identityId);
 
-        // Resolve canonical domain
         let domain = await this.canonicalDomainService.findOrCreateCanonicalDomain(
             domainName,
             undefined,
@@ -413,7 +456,6 @@ export class UsersService {
             throw new Error('Could not resolve domain');
         }
 
-        // Check if exists
         const existing = await this.userDomainRepo.findOne({
             where: {
                 userProfileId: profile.id,
@@ -434,7 +476,6 @@ export class UsersService {
 
         const saved = await this.userDomainRepo.save(userDomain);
 
-        // Queue vector update
         if (this.backgroundJobs) {
             this.backgroundJobs.queueProfileVectorUpdate(profile.id).catch(e => console.error(e));
         }
@@ -445,7 +486,6 @@ export class UsersService {
     async removeUserDomain(identityId: string, domainId: string) {
         const profile = await this.getUserProfileById(identityId);
 
-        // Try to find the user domain first to get the canonical domain ID
         let userDomain = await this.userDomainRepo.findOne({
             where: { id: domainId, userProfileId: profile.id },
             relations: ['domain']
@@ -454,7 +494,6 @@ export class UsersService {
         let canonicalDomainId = userDomain?.domainId;
 
         if (!userDomain) {
-            // Fallback: maybe domainId passed is the canonical domain ID?
             userDomain = await this.userDomainRepo.findOne({
                 where: { domainId: domainId, userProfileId: profile.id },
                 relations: ['domain']
@@ -466,17 +505,14 @@ export class UsersService {
             throw new NotFoundException('User domain not found');
         }
 
-        // Capture ID before delete
         canonicalDomainId = userDomain.domainId;
 
         await this.userDomainRepo.remove(userDomain);
 
-        // Decrement usage count
         if (canonicalDomainId) {
             this.canonicalDomainService.decrementUsageCount(canonicalDomainId).catch(e => console.error(e));
         }
 
-        // Queue vector update
         if (this.backgroundJobs) {
             this.backgroundJobs.queueProfileVectorUpdate(profile.id).catch(e => console.error(e));
         }
@@ -484,11 +520,9 @@ export class UsersService {
         return { success: true };
     }
 
-    // Role Management
     async addUserRole(identityId: string, roleName: string) {
         const profile = await this.getUserProfileById(identityId);
 
-        // Resolve canonical role
         let role = await this.canonicalRoleService.findOrCreateCanonicalRole(
             roleName,
             undefined,
@@ -499,7 +533,6 @@ export class UsersService {
             throw new Error('Could not resolve role');
         }
 
-        // Check if exists
         const existing = await this.userRoleRepo.findOne({
             where: {
                 userProfileId: profile.id,
@@ -520,7 +553,6 @@ export class UsersService {
 
         const saved = await this.userRoleRepo.save(userRole);
 
-        // Queue vector update
         if (this.backgroundJobs) {
             this.backgroundJobs.queueProfileVectorUpdate(profile.id).catch(e => console.error(e));
         }
@@ -531,7 +563,6 @@ export class UsersService {
     async removeUserRole(identityId: string, roleId: string) {
         const profile = await this.getUserProfileById(identityId);
 
-        // Try to find the user role first to get the canonical role ID
         let userRole = await this.userRoleRepo.findOne({
             where: { id: roleId, userProfileId: profile.id },
             relations: ['role']
@@ -540,7 +571,6 @@ export class UsersService {
         let canonicalRoleId = userRole?.roleId;
 
         if (!userRole) {
-            // Fallback
             userRole = await this.userRoleRepo.findOne({
                 where: { roleId: roleId, userProfileId: profile.id },
                 relations: ['role']
@@ -556,22 +586,16 @@ export class UsersService {
 
         await this.userRoleRepo.remove(userRole);
 
-        // Decrement usage count
         if (canonicalRoleId) {
             this.canonicalRoleService.decrementUsageCount(canonicalRoleId).catch(e => console.error(e));
         }
 
-        // Queue vector update
         if (this.backgroundJobs) {
             this.backgroundJobs.queueProfileVectorUpdate(profile.id).catch(e => console.error(e));
         }
 
         return { success: true };
     }
-
-    // ============================================
-    // Service Functions for Cross-Module Access
-    // ============================================
 
     async isAccountPrivate(userId: string): Promise<boolean> {
         const identity = await this.identityRepo.findOne({
@@ -596,14 +620,9 @@ export class UsersService {
         return privacyMap;
     }
 
-    /**
-     * Update user profile with onboarding data
-     * Resolves strings to Canonical Entities and saves properly
-     */
     async updateFromOnboarding(identityId: string, onboardingData: any): Promise<UserProfile> {
         const profile = await this.getUserProfileById(identityId);
 
-        // 1. Update Primary Role
         if (onboardingData.primaryRole && typeof onboardingData.primaryRole === 'string') {
             try {
                 const roleName = onboardingData.primaryRole.trim();
@@ -629,7 +648,6 @@ export class UsersService {
             }
         }
 
-        // 2. Update Secondary Roles
         if (onboardingData.roles && onboardingData.roles.length > 0) {
             if (!profile.userRoles) profile.userRoles = [];
 
@@ -677,7 +695,6 @@ export class UsersService {
             }
         }
 
-        // 3. Update Domains
         if (onboardingData.domains && onboardingData.domains.length > 0) {
             if (!profile.userDomains) profile.userDomains = [];
 
@@ -733,7 +750,6 @@ export class UsersService {
             }
         }
 
-        // 4. Update Skills (Legacy + Structured)
         if (onboardingData.skills && onboardingData.skills.length > 0) {
             if (!profile.userSkills) profile.userSkills = [];
 
@@ -817,7 +833,6 @@ export class UsersService {
             }
         }
 
-        // 5. Update Projects (JSONB for now)
         if (onboardingData.projects && onboardingData.projects.length > 0) {
             profile.projects = onboardingData.projects.map((project: any) => ({
                 title: project.title,
@@ -828,7 +843,6 @@ export class UsersService {
             }));
         }
 
-        // 6. Update Availability/Intent
         if (onboardingData.availabilityHours || onboardingData.availability) {
             const availability = onboardingData.availabilityHours || onboardingData.availability;
             if (typeof availability === 'number') {
@@ -849,14 +863,12 @@ export class UsersService {
             profile.intent = onboardingData.intent;
         }
 
-        // 7. Generate Summary & Save
         profile.profileSummaryText = this.generateProfileSummary(profile);
         profile.onboardingCompleted = true;
         profile.profileCompleteness = this.calculateProfileCompleteness(profile);
 
         const savedProfile = await this.repo.save(profile);
 
-        // Queue vector update
         if (this.backgroundJobs && typeof this.backgroundJobs.queueProfileVectorUpdate === 'function') {
             try {
                 await this.backgroundJobs.queueProfileVectorUpdate(savedProfile.id);
@@ -868,9 +880,6 @@ export class UsersService {
         return savedProfile;
     }
 
-    /**
-     * Generate a human-readable profile summary for future embedding
-     */
     private generateProfileSummary(profile: UserProfile): string {
         const parts: string[] = [];
 

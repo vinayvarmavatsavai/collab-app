@@ -20,6 +20,7 @@ import { OnboardingModule } from './onboarding/onboarding.module';
 import { MatchingModule } from './matching/matching.module';
 import { BullConfigModule } from './bull/bull.module';
 import { CommunitiesModule } from './communities/communities.module';
+import { MessagesModule } from './messages/messages.module';
 
 @Module({
   imports: [
@@ -48,7 +49,6 @@ import { CommunitiesModule } from './communities/communities.module';
           password: dbConfig.password,
           database: dbConfig.name,
           entities: [__dirname + '/typeorm/entities/*{.ts,.js}'],
-
           autoLoadEntities: true,
           synchronize: true,
         };
@@ -62,12 +62,11 @@ import { CommunitiesModule } from './communities/communities.module';
     FriendshipsModule,
     PostsModule,
     OnboardingModule,
-    OnboardingModule,
     MatchingModule,
     CommunitiesModule,
+    MessagesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-
-export class AppModule { }
+export class AppModule {}

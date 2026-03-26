@@ -1,46 +1,48 @@
-"use client"
+"use client";
 
-import { useMemo, useState } from "react"
-import { cn } from "@/lib/utils"
+import { useMemo, useState } from "react";
+import { cn } from "@/lib/utils";
 import BottomNav from "../navigation/BottomNav";
-import type { ChatContact } from "@/components/messaging/chat-data"
+import type { ChatContact } from "./chat-data";
 
-type ChatCategory = ChatContact["category"]
+type ChatCategory = ChatContact["category"];
 
 interface ChatSidebarProps {
-  contacts: ChatContact[]
-  activeChatId: string
-  onSelectChat: (id: string) => void
-  searchQuery: string
-  onSearchChange: (query: string) => void
+  contacts: ChatContact[];
+  activeChatId: string;
+  onSelectChat: (id: string) => void;
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
 }
 
 interface TabItem {
-  key: ChatCategory
-  label: string
+  key: ChatCategory;
+  label: string;
 }
 
 const tabs: TabItem[] = [
   { key: "cohorts", label: "Cohorts" },
   { key: "communities", label: "Communities" },
   { key: "dms", label: "DMs" },
-]
+];
 
 function ContactList({
   contacts,
   activeChatId,
   onSelectChat,
 }: {
-  contacts: ChatContact[]
-  activeChatId: string
-  onSelectChat: (id: string) => void
+  contacts: ChatContact[];
+  activeChatId: string;
+  onSelectChat: (id: string) => void;
 }) {
   if (contacts.length === 0) {
     return (
       <div className="flex items-center justify-center py-12">
-        <p className="text-sm text-[var(--text-muted-2)]">No conversations in this tab</p>
+        <p className="text-sm text-[var(--text-muted-2)]">
+          No conversations in this tab
+        </p>
       </div>
-    )
+    );
   }
 
   return (
@@ -66,7 +68,7 @@ function ContactList({
               <span
                 className={cn(
                   "truncate text-sm text-[var(--text-main)]",
-                  contact.unread ? "font-semibold" : "font-medium"
+                  contact.unreadCount ? "font-semibold" : "font-medium"
                 )}
               >
                 {contact.name}
@@ -81,7 +83,7 @@ function ContactList({
               <span
                 className={cn(
                   "truncate text-xs",
-                  contact.unread
+                  contact.unreadCount
                     ? "font-medium text-[var(--text-main)]"
                     : "text-[var(--text-muted-2)]"
                 )}
@@ -89,15 +91,17 @@ function ContactList({
                 {contact.lastMessage}
               </span>
 
-              {contact.unread && (
-                <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--primary)]" />
-              )}
+              {contact.unreadCount ? (
+                <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-[var(--primary-btn-bg)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--primary-btn-text)]">
+                  {contact.unreadCount}
+                </span>
+              ) : null}
             </div>
           </div>
         </button>
       ))}
     </div>
-  )
+  );
 }
 
 export function ChatSidebar({
@@ -107,27 +111,32 @@ export function ChatSidebar({
   searchQuery,
   onSearchChange,
 }: ChatSidebarProps) {
-  const initialTab = contacts.find((c) => c.id === activeChatId)?.category ?? "cohorts"
-  const [activeTab, setActiveTab] = useState<ChatCategory>(initialTab)
+  const initialTab =
+    contacts.find((c) => c.id === activeChatId)?.category ?? "dms";
+  const [activeTab, setActiveTab] = useState<ChatCategory>(initialTab);
 
   const filteredContacts = useMemo(
-    () => contacts.filter((c) => c.name.toLowerCase().includes(searchQuery.toLowerCase())),
+    () =>
+      contacts.filter((c) =>
+        c.name.toLowerCase().includes(searchQuery.toLowerCase())
+      ),
     [contacts, searchQuery]
-  )
+  );
 
   const tabContacts = useMemo(
     () => filteredContacts.filter((c) => c.category === activeTab),
     [filteredContacts, activeTab]
-  )
+  );
 
   const tabCounts = useMemo(
     () => ({
       cohorts: filteredContacts.filter((c) => c.category === "cohorts").length,
-      communities: filteredContacts.filter((c) => c.category === "communities").length,
+      communities: filteredContacts.filter((c) => c.category === "communities")
+        .length,
       dms: filteredContacts.filter((c) => c.category === "dms").length,
     }),
     [filteredContacts]
-  )
+  );
 
   return (
     <aside className="flex w-full flex-col bg-[var(--app-bg)] md:w-80 md:border-r md:border-[var(--line-soft)] lg:w-96">
@@ -143,7 +152,7 @@ export function ChatSidebar({
       <div className="px-4 py-3">
         <div className="grid grid-cols-3 gap-1 rounded-2xl border border-[var(--line-soft)] bg-[var(--muted)] p-1">
           {tabs.map((tab) => {
-            const isActive = tab.key === activeTab
+            const isActive = tab.key === activeTab;
 
             return (
               <button
@@ -161,13 +170,15 @@ export function ChatSidebar({
                 <span
                   className={cn(
                     "ml-1 text-[10px] sm:text-[11px]",
-                    isActive ? "text-[var(--text-main)]" : "text-[var(--text-muted-2)]"
+                    isActive
+                      ? "text-[var(--text-main)]"
+                      : "text-[var(--text-muted-2)]"
                   )}
                 >
                   ({tabCounts[tab.key]})
                 </span>
               </button>
-            )
+            );
           })}
         </div>
       </div>
@@ -179,7 +190,8 @@ export function ChatSidebar({
           onSelectChat={onSelectChat}
         />
       </div>
+
       <BottomNav />
     </aside>
-  )
+  );
 }

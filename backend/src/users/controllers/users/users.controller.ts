@@ -79,6 +79,12 @@ export class UsersController {
         return this.usersService.getProfileByUsername(username);
     }
 
+    // PUBLIC PROFILE ENDPOINT FOR QR / SHAREABLE LINKS
+    @Get('public/profile/:username')
+    async getPublicProfileByUsername(@Param('username') username: string) {
+        return this.usersService.getPublicProfileByUsername(username);
+    }
+
     @UseGuards(JwtAuthGuard)
     @Get('id/:userId')
     async getUserProfileById(@Param('userId', ParseUUIDPipe) userId: string) {
