@@ -235,6 +235,7 @@ export function removeRequestApplicant(requestId: number, applicantName: string)
   saveRequestApplicants(next);
   return next;
 }
+
 export function getApplicantsForRequest(requestId: number): RequestApplicant[] {
   return getRequestApplicants().filter((item) => item.requestId === requestId);
 }
@@ -495,4 +496,372 @@ export function createProjectFromAcceptedApplicant(input: {
   return {
     projectId,
   };
+}
+
+export type SuggestedCollaborator = {
+  id: number;
+  firstName: string;
+  lastName: string;
+  username: string;
+  primaryDomain: string;
+  skills: string[];
+  tags: string[];
+  intent: string;
+};
+
+export type RecommendationItem = SuggestedCollaborator & {
+  score: number;
+  matchedSkills: string[];
+  matchedTags: string[];
+};
+
+export const MOCK_COLLABORATORS: SuggestedCollaborator[] = [
+  {
+    id: 1,
+    firstName: "Leela",
+    lastName: "Sankar",
+    username: "leela1",
+    primaryDomain: "Cloud Engineering",
+    skills: ["Azure", "GCP", "AWS"],
+    tags: ["analytics", "innovation"],
+    intent: "Open to contributing to open source",
+  },
+  {
+    id: 2,
+    firstName: "Fitan",
+    lastName: "Tank",
+    username: "fitan2",
+    primaryDomain: "AI",
+    skills: ["NLP", "TensorFlow", "Machine Learning"],
+    tags: ["research", "deployment"],
+    intent: "Interested in building projects",
+  },
+  {
+    id: 3,
+    firstName: "Ekanta",
+    lastName: "Swamy",
+    username: "ekanta3",
+    primaryDomain: "Blockchain",
+    skills: ["Smart Contracts", "Solidity", "Ethereum"],
+    tags: ["research", "development"],
+    intent: "Interested in building projects",
+  },
+  {
+    id: 4,
+    firstName: "Aarini",
+    lastName: "Barman",
+    username: "aarini4",
+    primaryDomain: "AI",
+    skills: ["NLP", "Machine Learning", "PyTorch"],
+    tags: ["analytics", "research"],
+    intent: "Looking for collaborators",
+  },
+  {
+    id: 5,
+    firstName: "Maya",
+    lastName: "Rout",
+    username: "maya5",
+    primaryDomain: "ECE",
+    skills: ["Embedded Systems", "Signal Processing", "Verilog"],
+    tags: ["development", "innovation"],
+    intent: "Seeking co-founders",
+  },
+  {
+    id: 6,
+    firstName: "Daksh",
+    lastName: "Subramaniam",
+    username: "daksh6",
+    primaryDomain: "Computer Science",
+    skills: ["Algorithms", "Python", "Java"],
+    tags: ["innovation", "development"],
+    intent: "Looking for collaborators",
+  },
+  {
+    id: 7,
+    firstName: "Saksham",
+    lastName: "Patil",
+    username: "saksham7",
+    primaryDomain: "AgriTech",
+    skills: ["Soil Analysis", "Drones", "Precision Farming"],
+    tags: ["deployment", "research"],
+    intent: "Interested in building projects",
+  },
+  {
+    id: 8,
+    firstName: "Reva",
+    lastName: "Bahl",
+    username: "reva8",
+    primaryDomain: "Robotics",
+    skills: ["ROS", "Sensors", "Computer Vision"],
+    tags: ["design", "innovation"],
+    intent: "Seeking co-founders",
+  },
+  {
+    id: 9,
+    firstName: "Odika",
+    lastName: "Mangal",
+    username: "odika9",
+    primaryDomain: "Mechanical",
+    skills: ["CAD", "Thermodynamics", "SolidWorks"],
+    tags: ["innovation", "development"],
+    intent: "Seeking co-founders",
+  },
+  {
+    id: 10,
+    firstName: "Raksha",
+    lastName: "Mane",
+    username: "raksha10",
+    primaryDomain: "Civil",
+    skills: ["Surveying", "STAAD", "Structural Design"],
+    tags: ["development", "deployment"],
+    intent: "Looking for collaborators",
+  },
+  {
+    id: 11,
+    firstName: "Hema",
+    lastName: "Konda",
+    username: "hema11",
+    primaryDomain: "Data Science",
+    skills: ["Pandas", "Statistics", "SQL"],
+    tags: ["development", "innovation"],
+    intent: "Open to research partnerships",
+  },
+  {
+    id: 12,
+    firstName: "Balveer",
+    lastName: "Bajaj",
+    username: "balveer12",
+    primaryDomain: "Computer Science",
+    skills: ["Python", "React", "Algorithms"],
+    tags: ["research", "development"],
+    intent: "Looking for collaborators",
+  },
+  {
+    id: 13,
+    firstName: "Gaurangi",
+    lastName: "Krish",
+    username: "gaurangi13",
+    primaryDomain: "HealthTech",
+    skills: ["AI", "Medical Imaging", "EHR"],
+    tags: ["analytics", "development"],
+    intent: "Looking for collaborators",
+  },
+  {
+    id: 14,
+    firstName: "David",
+    lastName: "Nigam",
+    username: "david14",
+    primaryDomain: "Cloud Engineering",
+    skills: ["AWS", "GCP", "Serverless"],
+    tags: ["deployment", "research"],
+    intent: "Open to contributing to open source",
+  },
+  {
+    id: 15,
+    firstName: "Omya",
+    lastName: "Nayak",
+    username: "omya15",
+    primaryDomain: "DevOps",
+    skills: ["Terraform", "Kubernetes", "CI/CD"],
+    tags: ["research", "development"],
+    intent: "Open to research partnerships",
+  },
+  {
+    id: 16,
+    firstName: "Devansh",
+    lastName: "Pingle",
+    username: "devansh16",
+    primaryDomain: "Cloud Engineering",
+    skills: ["AWS", "Serverless", "GCP"],
+    tags: ["analytics", "innovation"],
+    intent: "Open to contributing to open source",
+  },
+  {
+    id: 17,
+    firstName: "Urmi",
+    lastName: "Tiwari",
+    username: "urmi17",
+    primaryDomain: "Mechanical",
+    skills: ["Thermodynamics", "CAD", "SolidWorks"],
+    tags: ["development", "research"],
+    intent: "Interested in building projects",
+  },
+  {
+    id: 18,
+    firstName: "Alka",
+    lastName: "Malhotra",
+    username: "alka18",
+    primaryDomain: "FinTech",
+    skills: ["APIs", "Payments", "Trading Systems"],
+    tags: ["analytics", "development"],
+    intent: "Interested in building projects",
+  },
+  {
+    id: 19,
+    firstName: "Ekiya",
+    lastName: "Kara",
+    username: "ekiya19",
+    primaryDomain: "Data Science",
+    skills: ["Pandas", "SQL", "NumPy"],
+    tags: ["research", "design"],
+    intent: "Looking for collaborators",
+  },
+];
+
+export function normalizeRecommendationText(value: string) {
+  return value.trim().toLowerCase();
+}
+
+export function getRecommendationDomainSignals(
+  tags: string[],
+  title: string,
+  problem: string,
+) {
+  const text = `${title} ${problem}`.toLowerCase();
+  const signals = new Set<string>();
+
+  if (tags.includes("ai")) {
+    signals.add("ai");
+    signals.add("data science");
+    signals.add("healthtech");
+  }
+
+  if (tags.includes("data-science")) {
+    signals.add("data science");
+    signals.add("ai");
+  }
+
+  if (tags.includes("web-dev")) {
+    signals.add("computer science");
+    signals.add("devops");
+    signals.add("cloud engineering");
+  }
+
+  if (tags.includes("robotics")) {
+    signals.add("robotics");
+    signals.add("ece");
+  }
+
+  if (tags.includes("design")) {
+    signals.add("design");
+  }
+
+  if (
+    text.includes("cloud") ||
+    text.includes("aws") ||
+    text.includes("gcp") ||
+    text.includes("azure")
+  ) {
+    signals.add("cloud engineering");
+    signals.add("devops");
+  }
+
+  if (
+    text.includes("deploy") ||
+    text.includes("deployment") ||
+    text.includes("serverless")
+  ) {
+    signals.add("cloud engineering");
+    signals.add("devops");
+  }
+
+  if (
+    text.includes("api") ||
+    text.includes("backend") ||
+    text.includes("frontend")
+  ) {
+    signals.add("computer science");
+  }
+
+  return Array.from(signals);
+}
+
+export function getRecommendedCollaboratorsForPost(input: {
+  title: string;
+  problem?: string;
+  skills: string[];
+  interestTags: string[];
+  type?: "Public" | "Private" | "public" | "private";
+  experience?: string;
+  limit?: number;
+}): RecommendationItem[] {
+  const normalizedSkills = input.skills.map(normalizeRecommendationText);
+  const normalizedTags = input.interestTags.map(normalizeRecommendationText);
+  const domainSignals = getRecommendationDomainSignals(
+    input.interestTags,
+    input.title,
+    input.problem || "",
+  ).map(normalizeRecommendationText);
+
+  const normalizedType = (input.type || "").toString().toLowerCase();
+  const limit = input.limit ?? 4;
+
+  return MOCK_COLLABORATORS.map((person) => {
+    const personDomainNormalized = normalizeRecommendationText(person.primaryDomain);
+
+    const matchedSkills = person.skills.filter((skill) =>
+      normalizedSkills.some((requestSkill) => {
+        const normalizedSkill = normalizeRecommendationText(skill);
+        return (
+          normalizedSkill.includes(requestSkill) ||
+          requestSkill.includes(normalizedSkill)
+        );
+      }),
+    );
+
+    const matchedTags = person.tags.filter((tag) =>
+      normalizedTags.some((requestTag) => {
+        const normalizedTag = normalizeRecommendationText(tag);
+        return (
+          normalizedTag.includes(requestTag) ||
+          requestTag.includes(normalizedTag)
+        );
+      }),
+    );
+
+    let score = 0;
+    score += matchedSkills.length * 35;
+    score += matchedTags.length * 18;
+
+    if (domainSignals.some((signal) => personDomainNormalized.includes(signal))) {
+      score += 22;
+    }
+
+    if (
+      person.skills.some((skill) =>
+        domainSignals.some((signal) => {
+          const normalizedSkill = normalizeRecommendationText(skill);
+          return (
+            normalizedSkill.includes(signal) || signal.includes(normalizedSkill)
+          );
+        }),
+      )
+    ) {
+      score += 8;
+    }
+
+    if (
+      normalizedType === "public" &&
+      /collaborators|open source|research/i.test(person.intent)
+    ) {
+      score += 4;
+    }
+
+    if (
+      input.experience === "Beginner" &&
+      /building projects|collaborators/i.test(person.intent)
+    ) {
+      score += 4;
+    }
+
+    return {
+      ...person,
+      score,
+      matchedSkills,
+      matchedTags,
+    };
+  })
+    .filter((person) => person.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
 }
